@@ -46,6 +46,7 @@ model Transaction {
   category      String
   date          DateTime
   type          String         // income, expense, transfer
+  notes         String?        // optional field for additional details
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)

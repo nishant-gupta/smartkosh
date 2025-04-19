@@ -41,3 +41,5 @@ next-env.d.ts
 
 # Large files
 /features/*.png 
+
+db-scripts.txt

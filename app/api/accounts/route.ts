@@ -14,12 +14,45 @@ export async function GET(req: Request) {
       );
     }
     
-    // Type assertion for the user ID
-    const userId = (session.user as { id: string }).id;
+    // Log session information for debugging
+    console.log("Session user in accounts GET:", session.user);
+    
+    // Get user info either by ID or email
+    let user;
+    const userId = (session.user as any).id;
+    const userEmail = session.user.email;
+    
+    if (!userId && !userEmail) {
+      console.error("Neither user ID nor email available in session:", session);
+      return NextResponse.json(
+        { error: "User not properly authenticated" },
+        { status: 401 }
+      );
+    }
+    
+    // If we don't have ID but have email, look up the user
+    if (!userId && userEmail) {
+      console.log("Looking up user by email:", userEmail);
+      user = await prisma.user.findUnique({
+        where: { email: userEmail }
+      });
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Use the user ID from the database lookup if needed
+    const actualUserId = userId || user?.id;
     
     const accounts = await prisma.account.findMany({
       where: {
-        userId,
+        user: {
+          id: actualUserId
+        },
         isActive: true
       },
       orderBy: {
@@ -33,6 +66,8 @@ export async function GET(req: Request) {
         currency: true
       }
     });
+    
+    console.log(`Found ${accounts.length} accounts for user ${actualUserId}`);
     
     return NextResponse.json({ accounts });
   } catch (error) {
@@ -56,7 +91,40 @@ export async function POST(req: Request) {
       );
     }
     
-    const userId = (session.user as { id: string }).id;
+    // Log session information for debugging
+    console.log("Session user in accounts POST:", session.user);
+    
+    // Get user info either by ID or email
+    let user;
+    const userId = (session.user as any).id;
+    const userEmail = session.user.email;
+    
+    if (!userId && !userEmail) {
+      console.error("Neither user ID nor email available in session:", session);
+      return NextResponse.json(
+        { error: "User not properly authenticated" },
+        { status: 401 }
+      );
+    }
+    
+    // If we don't have ID but have email, look up the user
+    if (!userId && userEmail) {
+      console.log("Looking up user by email:", userEmail);
+      user = await prisma.user.findUnique({
+        where: { email: userEmail }
+      });
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Use the user ID from the database lookup if needed
+    const actualUserId = userId || user?.id;
+    
     const body = await req.json();
     
     const { name, type, balance, currency = "USD" } = body;
@@ -70,13 +138,19 @@ export async function POST(req: Request) {
     
     const account = await prisma.account.create({
       data: {
-        userId,
+        user: {
+          connect: {
+            id: actualUserId
+          }
+        },
         name,
         type,
         balance: parseFloat(balance.toString()),
         currency
       }
     });
+    
+    console.log(`Created account ${account.id} for user ${actualUserId}`);
     
     return NextResponse.json(account);
   } catch (error) {

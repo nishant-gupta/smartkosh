@@ -37,6 +37,7 @@ export default function TransactionsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Transaction state
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -62,77 +63,34 @@ export default function TransactionsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [itemsPerPage] = useState(10)
   
-  // Mock transactions for demonstration
-  const mockTransactions: Transaction[] = [
-    {
-      id: '1',
-      accountId: 'acc1',
-      amount: 156.78,
-      description: 'Walmart Superstore',
-      category: 'Groceries',
-      date: '2025-04-19',
-      type: 'expense',
-      aiReviewNeeded: true
-    },
-    {
-      id: '2',
-      accountId: 'acc1',
-      amount: 3500.00,
-      description: 'Monthly Salary',
-      category: 'Income',
-      date: '2025-04-18',
-      type: 'income'
-    },
-    {
-      id: '3',
-      accountId: 'acc1',
-      amount: 15.99,
-      description: 'Netflix Subscription',
-      category: 'Entertainment',
-      date: '2025-04-17',
-      type: 'expense'
-    },
-    {
-      id: '4',
-      accountId: 'acc1',
-      amount: 45.50,
-      description: 'Gas Station',
-      category: 'Transportation',
-      date: '2025-04-16',
-      type: 'expense'
-    },
-    {
-      id: '5',
-      accountId: 'acc1',
-      amount: 120.75,
-      description: 'Electricity Bill',
-      category: 'Bills & Utilities',
-      date: '2025-04-15',
-      type: 'expense'
-    },
-    {
-      id: '6',
-      accountId: 'acc1',
-      amount: 89.99,
-      description: 'Internet Bill',
-      category: 'Bills & Utilities',
-      date: '2025-04-14',
-      type: 'expense'
+  // Fetch transactions from API
+  const fetchTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/transactions?page=${currentPage}&limit=${itemsPerPage}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+      
+      const data = await response.json();
+      setTransactions(data.transactions);
+      setTotalPages(data.pagination.pages);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
   
-  // Authentication check
+  // Authentication check and initial data load
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
     } else if (status === 'authenticated') {
-      setIsLoading(false)
-      
-      // In a real app, fetch transactions from API
-      // For now, use mock data
-      setTransactions(mockTransactions)
+      fetchTransactions();
     }
-  }, [status, router])
+  }, [status, router, currentPage, itemsPerPage])
   
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -245,29 +203,85 @@ export default function TransactionsPage() {
     setIsTransactionModalOpen(false)
   }
   
-  const handleSaveTransaction = (transaction: Transaction) => {
-    // In a real app, update the backend
-    // For mock, update local state
-    if (transactionModalMode === 'add') {
-      // Add new transaction to list
-      setTransactions(prev => [transaction, ...prev])
-    } else {
-      // Update existing transaction
-      setTransactions(prev => 
-        prev.map(t => t.id === transaction.id ? transaction : t)
-      )
+  const handleSaveTransaction = async (transaction: Transaction) => {
+    try {
+      setIsSubmitting(true);
+      
+      if (transactionModalMode === 'add') {
+        // Create new transaction
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(transaction),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create transaction');
+        }
+        
+        // Refresh transactions after successful creation
+        fetchTransactions();
+      } else {
+        // Update existing transaction
+        const response = await fetch(`/api/transactions/${transaction.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(transaction),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update transaction');
+        }
+        
+        // Refresh transactions after successful update
+        fetchTransactions();
+      }
+      
+      setIsTransactionModalOpen(false);
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      alert('Failed to save transaction. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsTransactionModalOpen(false)
   }
   
-  const handleDeleteTransaction = (id: string) => {
-    // Remove transaction from list
-    setTransactions(prev => prev.filter(t => t.id !== id))
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete transaction');
+      }
+      
+      // Refresh transactions after successful deletion
+      fetchTransactions();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
   
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
+    setCurrentPage(page);
+    // fetchTransactions will be called due to the dependency in the useEffect
   }
   
   // Helper functions
@@ -286,8 +300,41 @@ export default function TransactionsPage() {
   
   // Get unique categories for filter
   const getUniqueCategories = () => {
-    const categoriesSet = new Set(transactions.map(t => t.category));
-    return ['all', ...Array.from(categoriesSet)];
+    const allCategories = transactions.map(t => t.category);
+    return ['all', ...Array.from(new Set(allCategories))];
+  }
+  
+  // Add a function to get category icons
+  const getCategoryIcon = (category: string) => {
+    const icons: Record<string, string> = {
+      'Income': '💰',
+      'Salary': '💰',
+      'Food': '🍔',
+      'Utilities': '💡',
+      'Transfer': '↔️',
+      'Dining': '🍽️',
+      'Shopping': '🛍️',
+      'Entertainment': '🎬',
+      'Travel': '✈️',
+      'Health': '🏥',
+      'Health & Medical': '🏥',
+      'Personal Care': '💆',
+      'Education': '📚',
+      'Groceries': '🛒',
+      'Housing': '🏠',
+      'Transportation': '🚗',
+      'Bills & Utilities': '📱',
+      'Business': '💼',
+      'Investments': '📈',
+      'Rental Income': '🏘️',
+      'Dividends': '💸',
+      'Interest': '💹',
+      'Gifts': '🎁',
+      'Gifts & Donations': '🎁',
+      'Refunds': '↩️',
+      'Other': '📋'
+    }
+    return icons[category] || '📋'
   }
   
   if (isLoading) {
@@ -524,25 +571,12 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <select 
-                          value={transaction.category}
-                          onChange={(e) => {
-                            // Update category locally
-                            const updatedTransaction = {
-                              ...transaction,
-                              category: e.target.value,
-                              aiReviewNeeded: false
-                            }
-                            setTransactions(prev => 
-                              prev.map(t => t.id === transaction.id ? updatedTransaction : t)
-                            )
-                          }}
-                          className={`text-sm bg-transparent border ${transaction.aiReviewNeeded ? 'border-yellow-200' : 'border-transparent'} rounded px-2 py-1 ${transaction.aiReviewNeeded ? 'focus:border-yellow-300' : 'focus:border-gray-300'}`}
-                        >
-                          {getUniqueCategories().filter(c => c !== 'all').map(category => (
-                            <option key={category} value={category}>{category}</option>
-                          ))}
-                        </select>
+                        <span className="mr-2 text-xl" title={transaction.category}>
+                          {getCategoryIcon(transaction.category)}
+                        </span>
+                        <span className="text-sm text-gray-900">
+                          {transaction.category}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -554,18 +588,20 @@ export default function TransactionsPage() {
                       <div className="flex justify-end space-x-2">
                         <button 
                           onClick={() => handleEditTransaction(transaction)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                          title="Edit transaction"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                           </svg>
                         </button>
                         <button 
                           onClick={() => handleDeleteTransaction(transaction.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-gray-400 hover:text-red-600 p-1"
+                          title="Delete transaction"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                           </svg>
                         </button>
                       </div>
@@ -711,8 +747,10 @@ export default function TransactionsPage() {
       <TransactionModal
         isOpen={isTransactionModalOpen}
         onClose={handleCloseTransactionModal}
+        onSave={handleSaveTransaction}
         transaction={selectedTransaction}
         mode={transactionModalMode}
+        isSubmitting={isSubmitting}
       />
     </div>
   )

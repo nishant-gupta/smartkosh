@@ -14,17 +14,50 @@ export async function GET(req: Request) {
       );
     }
     
+    // Log session information for debugging
+    console.log("Session user in GET:", session.user);
+    
+    // Get user info either by ID or email
+    let user;
+    const userId = (session.user as any).id;
+    const userEmail = session.user.email;
+    
+    if (!userId && !userEmail) {
+      console.error("Neither user ID nor email available in session:", session);
+      return NextResponse.json(
+        { error: "User not properly authenticated" },
+        { status: 401 }
+      );
+    }
+    
+    // If we don't have ID but have email, look up the user
+    if (!userId && userEmail) {
+      console.log("Looking up user by email:", userEmail);
+      user = await prisma.user.findUnique({
+        where: { email: userEmail }
+      });
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+    }
+    
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "10");
     const page = parseInt(searchParams.get("page") || "1");
     const skip = (page - 1) * limit;
     
-    // Type assertion for the user ID
-    const userId = (session.user as { id: string }).id;
+    // Use the user ID from the database lookup if needed
+    const actualUserId = userId || user?.id;
     
     const transactions = await prisma.transaction.findMany({
       where: {
-        userId,
+        user: {
+          id: actualUserId
+        }
       },
       orderBy: {
         date: "desc",
@@ -43,7 +76,9 @@ export async function GET(req: Request) {
     
     const total = await prisma.transaction.count({
       where: {
-        userId,
+        user: {
+          id: actualUserId
+        }
       },
     });
     
@@ -77,10 +112,44 @@ export async function POST(req: Request) {
       );
     }
     
-    const userId = (session.user as { id: string }).id;
-    const body = await req.json();
+    // Log session information for debugging
+    console.log("Session user:", session.user);
     
-    const { accountId, amount, description, category, date, type } = body;
+    // Get user info either by ID or email
+    let user;
+    const userId = (session.user as any).id;
+    const userEmail = session.user.email;
+    
+    if (!userId && !userEmail) {
+      console.error("Neither user ID nor email available in session:", session);
+      return NextResponse.json(
+        { error: "User not properly authenticated" },
+        { status: 401 }
+      );
+    }
+    
+    // If we don't have ID but have email, look up the user
+    if (!userId && userEmail) {
+      console.log("Looking up user by email:", userEmail);
+      user = await prisma.user.findUnique({
+        where: { email: userEmail }
+      });
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Use the user ID from the database lookup if needed
+    const actualUserId = userId || user?.id;
+    
+    const body = await req.json();
+    console.log("Request body:", body);
+    
+    const { accountId, amount, description, category, date, type, notes } = body;
     
     if (!accountId || !amount || !description || !category || !date || !type) {
       return NextResponse.json(
@@ -93,34 +162,55 @@ export async function POST(req: Request) {
     const account = await prisma.account.findFirst({
       where: {
         id: accountId,
-        userId,
+        user: {
+          id: actualUserId
+        }
       },
     });
     
+    console.log("Account lookup result:", account ? "Found" : "Not found");
+    
     if (!account) {
+      console.log("Account not found - user ID:", actualUserId, "account ID:", accountId);
       return NextResponse.json(
         { error: "Account not found or doesn't belong to the user" },
         { status: 404 }
       );
     }
     
+    console.log("Creating transaction with user ID:", actualUserId, "account ID:", accountId);
+    
+    // Create the transaction
     const transaction = await prisma.transaction.create({
       data: {
-        userId,
-        accountId,
+        user: {
+          connect: {
+            id: actualUserId
+          }
+        },
+        account: {
+          connect: {
+            id: accountId
+          }
+        },
         amount: parseFloat(amount.toString()),
         description,
         category,
         date: new Date(date),
         type,
+        notes: notes || null
       },
     });
+    
+    console.log("Transaction created successfully:", transaction.id);
     
     // Update account balance
     let balanceChange = transaction.amount;
     if (transaction.type === "expense") {
       balanceChange = -balanceChange;
     }
+    
+    console.log("Updating account balance, change:", balanceChange);
     
     await prisma.account.update({
       where: {
@@ -133,9 +223,15 @@ export async function POST(req: Request) {
       },
     });
     
+    console.log("Account balance updated successfully");
+    
     return NextResponse.json(transaction);
   } catch (error) {
     console.error("Error creating transaction:", error);
+    console.error("Transaction creation error details:", error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.stack) {
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
       { error: "Failed to create transaction" },
       { status: 500 }

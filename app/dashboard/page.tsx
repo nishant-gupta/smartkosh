@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import TransactionModal from '@/components/TransactionModal'
+import TransactionsList from '@/components/dashboard/TransactionsList'
 
 // We'll use inline SVGs instead of heroicons
 // Icons
@@ -47,7 +48,7 @@ interface InsightItemProps {
 }
 
 interface TransactionItemProps {
-  icon: string;
+  icon: React.ReactNode;
   name: string;
   date: string;
   amount: string;
@@ -83,61 +84,33 @@ export default function Dashboard() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | undefined>(undefined)
   const [transactionModalMode, setTransactionModalMode] = useState<'add' | 'edit'>('add')
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   
-  // Mock transactions for demonstration
-  const mockTransactions: Transaction[] = [
-    {
-      id: '1',
-      accountId: 'acc1',
-      amount: 42.50,
-      description: 'Grubhub',
-      category: 'Food & Dining',
-      date: '2025-04-19',
-      type: 'expense'
-    },
-    {
-      id: '2',
-      accountId: 'acc1',
-      amount: 2125.00,
-      description: 'Salary Deposit',
-      category: 'Salary',
-      date: '2025-04-15',
-      type: 'income'
-    },
-    {
-      id: '3',
-      accountId: 'acc1',
-      amount: 950.00,
-      description: 'Rent Payment',
-      category: 'Housing',
-      date: '2025-04-10',
-      type: 'expense'
-    },
-    {
-      id: '4',
-      accountId: 'acc1',
-      amount: 78.35,
-      description: 'Amazon',
-      category: 'Shopping',
-      date: '2025-04-08',
-      type: 'expense'
-    },
-    {
-      id: '5',
-      accountId: 'acc1',
-      amount: 45.82,
-      description: 'Shell Gas Station',
-      category: 'Transportation',
-      date: '2025-04-05',
-      type: 'expense'
+  // State for real transactions data
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [accounts, setAccounts] = useState<any[]>([])
+  
+  // Fetch accounts data 
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch('/api/accounts');
+      if (!response.ok) {
+        throw new Error('Failed to fetch accounts');
+      }
+      const data = await response.json();
+      setAccounts(data);
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
     }
-  ];
+  };
   
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
     } else if (status === 'authenticated') {
       setIsLoading(false)
+      // Fetch accounts data when authenticated
+      fetchAccounts()
     }
   }, [status, router])
   
@@ -180,6 +153,51 @@ export default function Dashboard() {
 
   const handleCloseTransactionModal = () => {
     setIsTransactionModalOpen(false);
+  };
+  
+  const handleSaveTransaction = async (transaction: Transaction) => {
+    try {
+      if (transactionModalMode === 'add') {
+        // Create new transaction
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(transaction),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to create transaction');
+        }
+      } else {
+        // Update existing transaction
+        const response = await fetch(`/api/transactions/${transaction.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(transaction),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update transaction');
+        }
+      }
+      
+      // Close modal and reset
+      setIsTransactionModalOpen(false);
+      
+      // Refresh accounts data after transaction changes
+      fetchAccounts();
+      
+      // Increment refresh trigger to reload transactions list
+      setRefreshTrigger(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      alert('Failed to save transaction. Please try again.');
+    }
   };
   
   if (isLoading) {
@@ -441,18 +459,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="divide-y">
-              {mockTransactions.map(transaction => (
-                <TransactionItem 
-                  key={transaction.id}
-                  icon={getTransactionIcon(transaction.category)}
-                  name={transaction.description}
-                  date={formatDate(transaction.date)}
-                  amount={formatAmount(transaction.amount, transaction.type)}
-                  isNegative={transaction.type === 'expense'}
-                  transaction={transaction}
-                  onEdit={handleEditTransaction}
-                />
-              ))}
+              <TransactionsList limit={5} onEdit={handleEditTransaction} refreshTrigger={refreshTrigger} />
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm">
@@ -504,12 +511,15 @@ export default function Dashboard() {
       </div>
 
       {/* Transaction Modal */}
-      <TransactionModal
-        isOpen={isTransactionModalOpen}
-        onClose={handleCloseTransactionModal}
-        transaction={selectedTransaction}
-        mode={transactionModalMode}
-      />
+      {isTransactionModalOpen && (
+        <TransactionModal
+          isOpen={isTransactionModalOpen}
+          onClose={handleCloseTransactionModal}
+          onSave={handleSaveTransaction}
+          transaction={selectedTransaction}
+          mode={transactionModalMode}
+        />
+      )}
     </div>
   )
 }
@@ -614,33 +624,65 @@ function TransactionItem({
   onEdit 
 }: TransactionItemProps) {
   return (
-    <div className="flex items-center justify-between p-3 hover:bg-gray-50">
-      <div className="flex items-center">
-        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl mr-3">
+    <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
           {icon}
         </div>
         <div>
-          <div className="font-medium">{name}</div>
-          <div className="text-sm text-gray-500">{date}</div>
+          <p className="text-sm font-medium text-gray-900">{name}</p>
+          <p className="text-xs text-gray-500">{date}</p>
         </div>
       </div>
-      <div className="flex items-center">
-        <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+      <div className="flex items-center gap-2">
+        <span className={`text-sm font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
           {amount}
-        </div>
+        </span>
         {transaction && onEdit && (
-          <button 
-            onClick={() => onEdit(transaction)}
-            className="ml-4 text-gray-400 hover:text-gray-700"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+          <div className="flex gap-1">
+            <button 
+              onClick={() => onEdit(transaction)}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-edit">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button 
+              onClick={() => {
+                if (transaction && window.confirm('Are you sure you want to delete this transaction?')) {
+                  fetch(`/api/transactions/${transaction.id}`, {
+                    method: 'DELETE',
+                  })
+                  .then(response => {
+                    if (response.ok) {
+                      // You would typically refresh your transactions list here
+                      window.location.reload();
+                    } else {
+                      alert('Failed to delete transaction');
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the transaction');
+                  });
+                }
+              }}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-trash-2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+          </div>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function QuickAction({ icon, title, href, onClick }: QuickActionProps & { onClick?: () => void }) {
@@ -671,25 +713,32 @@ function formatAmount(amount: number, type: string): string {
   return `${type === 'income' ? '+' : '-'}${formatter.format(amount)}`;
 }
 
-function getTransactionIcon(category: string): string {
-  const categoryIcons: Record<string, string> = {
-    'Food & Dining': '🍔',
-    'Groceries': '🛒',
-    'Housing': '🏠',
-    'Transportation': '⛽',
-    'Entertainment': '🎬',
-    'Bills & Utilities': '💡',
-    'Shopping': '🛍️',
-    'Health & Medical': '🏥',
-    'Personal Care': '💇',
-    'Education': '📚',
-    'Travel': '✈️',
-    'Investments': '📈',
-    'Salary': '🏦',
-    'Business': '💼',
-    'Gifts & Donations': '🎁',
-    'Other': '📋'
+function getTransactionIcon(category: string): JSX.Element {
+  const renderIcon = (pathElement: JSX.Element) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {pathElement}
+    </svg>
+  );
+  
+  const categoryIcons: Record<string, JSX.Element> = {
+    'Food & Dining': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3z M7 7h.01M7 12h.01M7 17h.01M12 7h.01M12 12h.01M12 17h.01M17 7h.01M17 12h.01M17 17h.01" />),
+    'Groceries': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />),
+    'Housing': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />),
+    'Transportation': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m0 0v8m0-8l-8 8m4-8v8" />),
+    'Entertainment': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />),
+    'Bills & Utilities': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />),
+    'Shopping': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />),
+    'Health & Medical': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 12.5l7.5-7.5 7.5 7.5m-15 6l7.5-7.5 7.5 7.5" />),
+    'Personal Care': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.5 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM15.5 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />),
+    'Education': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />),
+    'Travel': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />),
+    'Investments': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />),
+    'Salary': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />),
+    'Business': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />),
+    'Gifts & Donations': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112.83 1.83l-2.83 2.83m0-8a2 2 0 100 4 2 2 0 000-4zm0 0l-8 6h16l-8-6z" />),
+    'Income': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />),
+    'Other': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />)
   };
   
-  return categoryIcons[category] || '💵';
+  return categoryIcons[category] || renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />);
 }
