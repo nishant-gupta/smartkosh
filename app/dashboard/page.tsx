@@ -33,6 +33,7 @@ interface SummaryCardProps {
   trend: string;
   period: string;
   icon: ReactNode;
+  trendColor?: string;
 }
 
 interface CategoryItemProps {
@@ -40,6 +41,7 @@ interface CategoryItemProps {
   amount: string;
   percentage: number;
   color: string;
+  isHighlighted?: boolean;
 }
 
 interface InsightItemProps {
@@ -74,6 +76,27 @@ interface Transaction {
   notes?: string;
 }
 
+// Define Tailwind color mapping to hex values
+const tailwindToHex: Record<string, string> = {
+  "bg-indigo-600": "#4f46e5",
+  "bg-purple-500": "#a855f7",
+  "bg-emerald-500": "#10b981",
+  "bg-blue-500": "#3b82f6",
+  "bg-green-500": "#22c55e",
+  "bg-yellow-500": "#eab308",
+  "bg-pink-500": "#ec4899",
+  "bg-red-500": "#ef4444",
+  "bg-orange-500": "#f97316",
+  "bg-teal-500": "#14b8a6",
+  "bg-cyan-500": "#06b6d4",
+  "bg-lime-500": "#84cc16",
+  "bg-amber-500": "#f59e0b",
+  "bg-violet-500": "#8b5cf6",
+  "bg-rose-500": "#f43f5e",
+  "bg-green-600": "#16a34a",
+  "bg-gray-400": "#9ca3af"
+};
+
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -106,6 +129,9 @@ export default function Dashboard() {
     percentage: number;
     color: string;
   }>>([])
+  
+  // Additional state for pie chart hover functionality
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   
   // Define category colors
   const categoryColors: Record<string, string> = {
@@ -521,7 +547,8 @@ export default function Dashboard() {
           <SummaryCard 
             title="TOTAL EXPENSES" 
             amount={formatCurrency(financialSummary.totalExpenses)} 
-            trend={financialSummary.expensesTrend} 
+            trend={financialSummary.expensesTrend}
+            trendColor={financialSummary.expensesTrend.startsWith('+') ? "text-red-600" : "text-green-600"}
             period="vs last month" 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -532,7 +559,8 @@ export default function Dashboard() {
           <SummaryCard 
             title="NET FLOW" 
             amount={formatCurrency(financialSummary.netFlow)} 
-            trend={financialSummary.netFlowTrend} 
+            trend={financialSummary.netFlowTrend}
+            trendColor={financialSummary.netFlow >= 0 ? "text-green-600" : "text-red-600"}
             period="vs last month" 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -572,19 +600,54 @@ export default function Dashboard() {
               <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
                 <div className="w-48 h-48 relative">
                   {categorySpending.length > 0 ? (
-                    <div className="w-full h-full rounded-full overflow-hidden">
-                      <div 
-                        className="w-full h-full" 
-                        style={{ 
-                          background: `conic-gradient(${categorySpending.map((cat, i) => {
-                            const prevTotal = categorySpending
-                              .slice(0, i)
-                              .reduce((sum, item) => sum + item.percentage, 0);
-                            return `${cat.color.replace('bg-', 'var(--')} ${prevTotal}% ${prevTotal + cat.percentage}%`;
-                          }).join(', ')})`
-                        }}
-                      ></div>
-                    </div>
+                    <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                      {/* Create pie slices */}
+                      {categorySpending.map((category, index) => {
+                        // Calculate the slice position
+                        let previousPercentage = 0;
+                        for (let i = 0; i < index; i++) {
+                          previousPercentage += categorySpending[i].percentage;
+                        }
+                        
+                        // Convert percentages to coordinates on a circle
+                        const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
+                        const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
+                        
+                        const endPercentage = previousPercentage + category.percentage;
+                        const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
+                        const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
+                        
+                        // Flag for large arc (> 180 degrees)
+                        const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                        
+                        // Create SVG arc path
+                        const path = `
+                          M 50 50
+                          L ${startX} ${startY}
+                          A 40 40 0 ${largeArcFlag} 1 ${endX} ${endY}
+                          Z
+                        `;
+                        
+                        // Get color from Tailwind class to hex mapping
+                        const hexColor = tailwindToHex[category.color] || "#9ca3af";
+                        
+                        return (
+                          <path
+                            key={category.category}
+                            d={path}
+                            fill={hexColor}
+                            className="hover:opacity-90 transition-opacity duration-200"
+                            onMouseEnter={() => setHoveredCategory(category.category)}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                            stroke="#fff"
+                            strokeWidth="1"
+                          />
+                        );
+                      })}
+                      
+                      {/* White circle in the middle for donut effect */}
+                      <circle cx="50" cy="50" r="25" fill="white" />
+                    </svg>
                   ) : (
                     <>
                       <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
@@ -604,7 +667,8 @@ export default function Dashboard() {
                         category={category.category} 
                         amount={formatCurrency(category.amount)} 
                         percentage={category.percentage} 
-                        color={category.color} 
+                        color={category.color}
+                        isHighlighted={hoveredCategory === category.category} 
                       />
                     ))
                   ) : (
@@ -762,7 +826,7 @@ function NavItem({ children, href, icon, isActive = false }: NavItemProps) {
   )
 }
 
-function SummaryCard({ title, amount, trend, period, icon }: SummaryCardProps) {
+function SummaryCard({ title, amount, trend, period, icon, trendColor = "text-green-600" }: SummaryCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
       <div className="flex justify-between items-start">
@@ -771,16 +835,16 @@ function SummaryCard({ title, amount, trend, period, icon }: SummaryCardProps) {
       </div>
       <div className="text-2xl font-bold mt-2">{amount}</div>
       <div className="flex items-center mt-2 text-xs">
-        <span className="text-green-600">{trend}</span>
+        <span className={trendColor}>{trend}</span>
         <span className="text-gray-500 ml-1">{period}</span>
       </div>
     </div>
   )
 }
 
-function CategoryItem({ category, amount, percentage, color }: CategoryItemProps) {
+function CategoryItem({ category, amount, percentage, color, isHighlighted = false }: CategoryItemProps) {
   return (
-    <div>
+    <div className={`${isHighlighted ? 'bg-gray-50 rounded-md p-1 -m-1' : ''} transition-all duration-150`}>
       <div className="flex justify-between items-center mb-1">
         <div className="flex items-center">
           <span className={`w-3 h-3 ${color} rounded-full mr-2`}></span>
