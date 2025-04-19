@@ -89,6 +89,44 @@ export default function Dashboard() {
   // State for real transactions data
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [accounts, setAccounts] = useState<any[]>([])
+  // New state for financial summary
+  const [financialSummary, setFinancialSummary] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    netFlow: 0,
+    incomeTrend: '+0%',
+    expensesTrend: '+0%',
+    netFlowTrend: '+0%'
+  })
+  
+  // State for category spending
+  const [categorySpending, setCategorySpending] = useState<Array<{
+    category: string;
+    amount: number;
+    percentage: number;
+    color: string;
+  }>>([])
+  
+  // Define category colors
+  const categoryColors: Record<string, string> = {
+    "Housing": "bg-indigo-600",
+    "Food & Dining": "bg-purple-500",
+    "Groceries": "bg-emerald-500",
+    "Transportation": "bg-blue-500",
+    "Entertainment": "bg-green-500",
+    "Bills & Utilities": "bg-yellow-500",
+    "Shopping": "bg-pink-500",
+    "Health & Medical": "bg-red-500",
+    "Personal Care": "bg-orange-500",
+    "Education": "bg-teal-500",
+    "Travel": "bg-cyan-500",
+    "Investments": "bg-lime-500",
+    "Gifts & Donations": "bg-amber-500",
+    "Salary": "bg-violet-500",
+    "Business": "bg-rose-500",
+    "Income": "bg-green-600",
+    "Other": "bg-gray-400"
+  }
   
   // Fetch accounts data 
   const fetchAccounts = async () => {
@@ -103,6 +141,117 @@ export default function Dashboard() {
       console.error('Error fetching accounts:', error);
     }
   };
+
+  // Get date range based on active tab
+  const getDateRange = () => {
+    const now = new Date();
+    let startDate, endDate;
+    
+    if (activeTab === 'week') {
+      // Get current week (Sunday to Saturday)
+      const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - day); // Go to last Sunday
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6); // Saturday
+    } else if (activeTab === 'month') {
+      // Current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (activeTab === 'year') {
+      // Current year
+      startDate = new Date(now.getFullYear(), 0, 1);
+      endDate = new Date(now.getFullYear(), 11, 31);
+    }
+    
+    return {
+      startDate: startDate?.toISOString().split('T')[0],
+      endDate: endDate?.toISOString().split('T')[0]
+    };
+  };
+
+  // New function to fetch transactions and calculate financial summary
+  const fetchFinancialSummary = async () => {
+    try {
+      // Get date range based on active tab
+      const { startDate, endDate } = getDateRange();
+      
+      // Fetch transactions for the selected period
+      const response = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
+      
+      const data = await response.json();
+      const periodTransactions = data.transactions || [];
+      
+      // Calculate totals
+      let totalIncome = 0;
+      let totalExpenses = 0;
+      
+      // Track spending by category
+      const categories: Record<string, number> = {};
+      
+      periodTransactions.forEach((transaction: Transaction) => {
+        if (transaction.type === 'income') {
+          totalIncome += transaction.amount;
+        } else if (transaction.type === 'expense') {
+          totalExpenses += transaction.amount;
+          
+          // Add to category totals for expenses only
+          const category = transaction.category || 'Other';
+          categories[category] = (categories[category] || 0) + transaction.amount;
+        }
+      });
+      
+      const netFlow = totalIncome - totalExpenses;
+      
+      // For now, we'll set static trends until we implement historical comparison
+      setFinancialSummary({
+        totalIncome,
+        totalExpenses,
+        netFlow,
+        incomeTrend: '+12%',  // These would ideally be calculated from previous month's data
+        expensesTrend: '+8%',
+        netFlowTrend: netFlow > 0 ? '+23%' : '-10%'
+      });
+      
+      // Calculate category percentages and prepare for display
+      if (totalExpenses > 0) {
+        const categoryData = Object.entries(categories)
+          .map(([category, amount]) => ({
+            category,
+            amount,
+            percentage: Math.round((amount / totalExpenses) * 100),
+            color: categoryColors[category] || 'bg-gray-400'
+          }))
+          .sort((a, b) => b.amount - a.amount) // Sort by amount descending
+          .slice(0, 5); // Take top 5 categories
+        
+        // If we have more than 5 categories, add an "Other" category with the remaining amount
+        if (Object.keys(categories).length > 5) {
+          const topCategoriesAmount = categoryData.reduce((sum, item) => sum + item.amount, 0);
+          const otherAmount = totalExpenses - topCategoriesAmount;
+          
+          if (otherAmount > 0) {
+            categoryData.push({
+              category: 'Other',
+              amount: otherAmount,
+              percentage: Math.round((otherAmount / totalExpenses) * 100),
+              color: 'bg-gray-400'
+            });
+          }
+        }
+        
+        setCategorySpending(categoryData);
+      } else {
+        setCategorySpending([]);
+      }
+    } catch (error) {
+      console.error('Error fetching financial summary:', error);
+    }
+  };
   
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -111,8 +260,17 @@ export default function Dashboard() {
       setIsLoading(false)
       // Fetch accounts data when authenticated
       fetchAccounts()
+      // Fetch financial summary
+      fetchFinancialSummary()
     }
   }, [status, router])
+
+  // Refresh summary when transactions change or active tab changes
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchFinancialSummary();
+    }
+  }, [refreshTrigger, activeTab, status]);
   
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -198,6 +356,14 @@ export default function Dashboard() {
       console.error('Error saving transaction:', error);
       alert('Failed to save transaction. Please try again.');
     }
+  };
+  
+  // Format currency for display
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
   };
   
   if (isLoading) {
@@ -343,8 +509,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6">
           <SummaryCard 
             title="TOTAL INCOME" 
-            amount="$4,250.00" 
-            trend="+12%" 
+            amount={formatCurrency(financialSummary.totalIncome)} 
+            trend={financialSummary.incomeTrend} 
             period="vs last month" 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -354,8 +520,8 @@ export default function Dashboard() {
           />
           <SummaryCard 
             title="TOTAL EXPENSES" 
-            amount="$2,840.50" 
-            trend="+8%" 
+            amount={formatCurrency(financialSummary.totalExpenses)} 
+            trend={financialSummary.expensesTrend} 
             period="vs last month" 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,8 +531,8 @@ export default function Dashboard() {
           />
           <SummaryCard 
             title="NET FLOW" 
-            amount="$1,409.50" 
-            trend="+23%" 
+            amount={formatCurrency(financialSummary.netFlow)} 
+            trend={financialSummary.netFlowTrend} 
             period="vs last month" 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -405,19 +571,47 @@ export default function Dashboard() {
             <div className="p-4 flex flex-col md:flex-row">
               <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
                 <div className="w-48 h-48 relative">
-                  <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
-                  <div className="absolute inset-0 flex items-center justify-center text-sm">
-                    Spending Distribution Chart
-                  </div>
+                  {categorySpending.length > 0 ? (
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      <div 
+                        className="w-full h-full" 
+                        style={{ 
+                          background: `conic-gradient(${categorySpending.map((cat, i) => {
+                            const prevTotal = categorySpending
+                              .slice(0, i)
+                              .reduce((sum, item) => sum + item.percentage, 0);
+                            return `${cat.color.replace('bg-', 'var(--')} ${prevTotal}% ${prevTotal + cat.percentage}%`;
+                          }).join(', ')})`
+                        }}
+                      ></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
+                      <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                        No expense data yet
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="w-full md:w-1/2">
                 <div className="space-y-4">
-                  <CategoryItem category="Housing" amount="$950.00" percentage={34} color="bg-indigo-600" />
-                  <CategoryItem category="Food & Dining" amount="$620.25" percentage={22} color="bg-purple-500" />
-                  <CategoryItem category="Transportation" amount="$425.75" percentage={15} color="bg-blue-500" />
-                  <CategoryItem category="Entertainment" amount="$350.00" percentage={12} color="bg-green-500" />
-                  <CategoryItem category="Other" amount="$494.50" percentage={17} color="bg-gray-400" />
+                  {categorySpending.length > 0 ? (
+                    categorySpending.map((category, index) => (
+                      <CategoryItem 
+                        key={index}
+                        category={category.category} 
+                        amount={formatCurrency(category.amount)} 
+                        percentage={category.percentage} 
+                        color={category.color} 
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      No expenses in this period
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -673,7 +867,7 @@ function TransactionItem({
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-trash-2">
                 <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"></path>
                 <line x1="10" y1="11" x2="10" y2="17"></line>
                 <line x1="14" y1="11" x2="14" y2="17"></line>
               </svg>
@@ -725,7 +919,7 @@ function getTransactionIcon(category: string): JSX.Element {
     'Groceries': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />),
     'Housing': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />),
     'Transportation': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m0 0v8m0-8l-8 8m4-8v8" />),
-    'Entertainment': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />),
+    'Entertainment': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2z" />),
     'Bills & Utilities': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />),
     'Shopping': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />),
     'Health & Medical': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 12.5l7.5-7.5 7.5 7.5m-15 6l7.5-7.5 7.5 7.5" />),

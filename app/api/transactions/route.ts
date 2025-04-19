@@ -49,16 +49,37 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const page = parseInt(searchParams.get("page") || "1");
     const skip = (page - 1) * limit;
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
     
     // Use the user ID from the database lookup if needed
     const actualUserId = userId || user?.id;
     
+    // Build the where clause with optional date filtering
+    const where: any = {
+      user: {
+        id: actualUserId
+      }
+    };
+    
+    // Add date filtering if provided
+    if (startDate || endDate) {
+      where.date = {};
+      
+      if (startDate) {
+        where.date.gte = new Date(startDate);
+      }
+      
+      if (endDate) {
+        // Set to end of day for the end date
+        const endDateObj = new Date(endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        where.date.lte = endDateObj;
+      }
+    }
+    
     const transactions = await prisma.transaction.findMany({
-      where: {
-        user: {
-          id: actualUserId
-        }
-      },
+      where,
       orderBy: {
         date: "desc",
       },
@@ -75,11 +96,7 @@ export async function GET(req: Request) {
     });
     
     const total = await prisma.transaction.count({
-      where: {
-        user: {
-          id: actualUserId
-        }
-      },
+      where,
     });
     
     return NextResponse.json({
