@@ -4,6 +4,7 @@ import { useEffect, useState, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
+import TransactionModal from '@/components/TransactionModal'
 
 // We'll use inline SVGs instead of heroicons
 // Icons
@@ -51,12 +52,25 @@ interface TransactionItemProps {
   date: string;
   amount: string;
   isNegative?: boolean;
+  transaction?: Transaction;
+  onEdit?: (transaction: Transaction) => void;
 }
 
 interface QuickActionProps {
   icon: ReactNode;
   title: string;
   href: string;
+}
+
+interface Transaction {
+  id: string;
+  accountId: string;
+  amount: number;
+  description: string;
+  category: string;
+  date: string;
+  type: 'income' | 'expense' | 'transfer';
+  notes?: string;
 }
 
 export default function Dashboard() {
@@ -66,6 +80,58 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('month')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | undefined>(undefined)
+  const [transactionModalMode, setTransactionModalMode] = useState<'add' | 'edit'>('add')
+  
+  // Mock transactions for demonstration
+  const mockTransactions: Transaction[] = [
+    {
+      id: '1',
+      accountId: 'acc1',
+      amount: 42.50,
+      description: 'Grubhub',
+      category: 'Food & Dining',
+      date: '2025-04-19',
+      type: 'expense'
+    },
+    {
+      id: '2',
+      accountId: 'acc1',
+      amount: 2125.00,
+      description: 'Salary Deposit',
+      category: 'Salary',
+      date: '2025-04-15',
+      type: 'income'
+    },
+    {
+      id: '3',
+      accountId: 'acc1',
+      amount: 950.00,
+      description: 'Rent Payment',
+      category: 'Housing',
+      date: '2025-04-10',
+      type: 'expense'
+    },
+    {
+      id: '4',
+      accountId: 'acc1',
+      amount: 78.35,
+      description: 'Amazon',
+      category: 'Shopping',
+      date: '2025-04-08',
+      type: 'expense'
+    },
+    {
+      id: '5',
+      accountId: 'acc1',
+      amount: 45.82,
+      description: 'Shell Gas Station',
+      category: 'Transportation',
+      date: '2025-04-05',
+      type: 'expense'
+    }
+  ];
   
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -98,6 +164,22 @@ export default function Dashboard() {
   const handleLogout = async () => {
     setIsUserMenuOpen(false);
     await signOut({ redirect: true, callbackUrl: '/login' });
+  };
+  
+  const handleOpenAddTransactionModal = () => {
+    setSelectedTransaction(undefined);
+    setTransactionModalMode('add');
+    setIsTransactionModalOpen(true);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setTransactionModalMode('edit');
+    setIsTransactionModalOpen(true);
+  };
+
+  const handleCloseTransactionModal = () => {
+    setIsTransactionModalOpen(false);
   };
   
   if (isLoading) {
@@ -200,42 +282,42 @@ export default function Dashboard() {
       
       {/* Main content */}
       <div className="flex-1 lg:ml-0 p-4 lg:p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
-            {/* Hamburger menu button (mobile only) */}
-            <button 
-              className="hamburger-menu lg:hidden mr-4 p-2 rounded-md hover:bg-gray-200"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            
-            <div>
-              <h1 className="text-xl font-bold">Dashboard</h1>
-              <div className="text-sm text-gray-500">April 2025</div>
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+          <div className="flex justify-between items-center px-4 py-3">
+            <div className="flex items-center">
+              <button 
+                className="lg:hidden mr-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h1 className="text-lg md:text-xl font-semibold">Dashboard</h1>
             </div>
-          </div>
-          
-          <div className="flex space-x-4">
-            <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </button>
-            <button className="bg-gray-900 text-white px-4 py-2 rounded-md flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span className="hidden sm:inline">Add Transaction</span>
-            </button>
+            
+            <div className="flex space-x-4">
+              <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </button>
+              <button 
+                className="bg-gray-900 text-white px-4 py-2 rounded-md flex items-center space-x-2"
+                onClick={handleOpenAddTransactionModal}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="hidden sm:inline">Add Transaction</span>
+              </button>
+            </div>
           </div>
         </div>
         
@@ -354,45 +436,23 @@ export default function Dashboard() {
           <div className="lg:col-span-2 bg-white rounded-lg shadow-sm">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="font-semibold">Recent Transactions</h2>
-              <button className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/transactions" className="text-sm text-gray-600 hover:text-gray-900">
                 View All
-              </button>
+              </Link>
             </div>
             <div className="divide-y">
-              <TransactionItem 
-                icon="🍔" 
-                name="Grubhub" 
-                date="Apr 19, 2025" 
-                amount="-$42.50" 
-                isNegative 
-              />
-              <TransactionItem 
-                icon="🏦" 
-                name="Salary Deposit" 
-                date="Apr 15, 2025" 
-                amount="+$2,125.00" 
-              />
-              <TransactionItem 
-                icon="🏠" 
-                name="Rent Payment" 
-                date="Apr 10, 2025" 
-                amount="-$950.00" 
-                isNegative 
-              />
-              <TransactionItem 
-                icon="🛒" 
-                name="Amazon" 
-                date="Apr 8, 2025" 
-                amount="-$78.35" 
-                isNegative 
-              />
-              <TransactionItem 
-                icon="⛽" 
-                name="Shell Gas Station" 
-                date="Apr 5, 2025" 
-                amount="-$45.82" 
-                isNegative 
-              />
+              {mockTransactions.map(transaction => (
+                <TransactionItem 
+                  key={transaction.id}
+                  icon={getTransactionIcon(transaction.category)}
+                  name={transaction.description}
+                  date={formatDate(transaction.date)}
+                  amount={formatAmount(transaction.amount, transaction.type)}
+                  isNegative={transaction.type === 'expense'}
+                  transaction={transaction}
+                  onEdit={handleEditTransaction}
+                />
+              ))}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm">
@@ -402,21 +462,22 @@ export default function Dashboard() {
             <div className="p-4 space-y-4">
               <QuickAction 
                 icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                   </svg>
-                }
-                title="Add Transaction"
-                href="/transactions/add"
+                } 
+                title="Add Transaction" 
+                href="#"
+                onClick={handleOpenAddTransactionModal}
               />
               <QuickAction 
                 icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
-                }
-                title="Upload Statement"
-                href="/upload-statement"
+                } 
+                title="Upload Statement" 
+                href="#" 
               />
               <QuickAction 
                 icon={
@@ -441,6 +502,14 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Transaction Modal */}
+      <TransactionModal
+        isOpen={isTransactionModalOpen}
+        onClose={handleCloseTransactionModal}
+        transaction={selectedTransaction}
+        mode={transactionModalMode}
+      />
     </div>
   )
 }
@@ -535,37 +604,92 @@ function InsightItem({ icon, text }: InsightItemProps) {
   )
 }
 
-function TransactionItem({ icon, name, date, amount, isNegative = false }: TransactionItemProps) {
+function TransactionItem({ 
+  icon, 
+  name, 
+  date, 
+  amount, 
+  isNegative = false,
+  transaction,
+  onEdit 
+}: TransactionItemProps) {
   return (
-    <div className="flex justify-between items-center p-4">
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center text-lg">
+    <div className="flex items-center justify-between p-3 hover:bg-gray-50">
+      <div className="flex items-center">
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl mr-3">
           {icon}
         </div>
         <div>
           <div className="font-medium">{name}</div>
-          <div className="text-xs text-gray-500">{date}</div>
+          <div className="text-sm text-gray-500">{date}</div>
         </div>
       </div>
-      <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-        {amount}
+      <div className="flex items-center">
+        <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+          {amount}
+        </div>
+        {transaction && onEdit && (
+          <button 
+            onClick={() => onEdit(transaction)}
+            className="ml-4 text-gray-400 hover:text-gray-700"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-function QuickAction({ icon, title, href }: QuickActionProps) {
+function QuickAction({ icon, title, href, onClick }: QuickActionProps & { onClick?: () => void }) {
   return (
-    <Link href={href} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+    <div 
+      className="bg-white rounded-lg shadow p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50"
+      onClick={onClick}
+    >
+      <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
         {icon}
       </div>
-      <div className="text-sm font-medium">{title}</div>
-      <div className="ml-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-        </svg>
-      </div>
-    </Link>
+      <div className="font-medium">{title}</div>
+    </div>
   )
+}
+
+// Helper functions for formatting
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatAmount(amount: number, type: string): string {
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  });
+  return `${type === 'income' ? '+' : '-'}${formatter.format(amount)}`;
+}
+
+function getTransactionIcon(category: string): string {
+  const categoryIcons: Record<string, string> = {
+    'Food & Dining': '🍔',
+    'Groceries': '🛒',
+    'Housing': '🏠',
+    'Transportation': '⛽',
+    'Entertainment': '🎬',
+    'Bills & Utilities': '💡',
+    'Shopping': '🛍️',
+    'Health & Medical': '🏥',
+    'Personal Care': '💇',
+    'Education': '📚',
+    'Travel': '✈️',
+    'Investments': '📈',
+    'Salary': '🏦',
+    'Business': '💼',
+    'Gifts & Donations': '🎁',
+    'Other': '📋'
+  };
+  
+  return categoryIcons[category] || '💵';
 }
