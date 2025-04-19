@@ -159,8 +159,7 @@ export async function DELETE(
     // Check if there are any transactions for this account
     const transactionCount = await prisma.transaction.count({
       where: {
-        accountId: id,
-        isActive: true
+        accountId: id
       }
     });
     
