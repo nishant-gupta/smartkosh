@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  goals         FinancialGoal[]
+}
+
+model Account {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  type          String         // checking, savings, credit, investment
+  balance       Float
+  currency      String         @default("USD")
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  transactions  Transaction[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id            String         @id @default(cuid())
+  userId        String
+  accountId     String
+  amount        Float
+  description   String
+  category      String
+  date          DateTime
+  type          String         // income, expense, transfer
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Budget {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  amount        Float
+  category      String
+  period        String         // monthly, yearly
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinancialGoal {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  targetAmount  Float
+  currentAmount Float          @default(0)
+  deadline      DateTime?
+  isCompleted   Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+} 
