@@ -114,7 +114,7 @@ export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-sm font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                  {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                  {transaction.type === 'income' ? '+' : '-'}₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(transaction.amount))}
                 </span>
                 {onEdit && (
                   <div className="flex justify-end space-x-2">

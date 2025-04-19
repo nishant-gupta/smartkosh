@@ -386,9 +386,10 @@ export default function Dashboard() {
   
   // Format currency for display
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
+      maximumFractionDigits: 0, // No decimal places for Rupees
     }).format(amount);
   };
   
@@ -964,9 +965,10 @@ function formatDate(dateString: string): string {
 }
 
 function formatAmount(amount: number, type: string): string {
-  const formatter = new Intl.NumberFormat('en-US', {
+  const formatter = new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
+    maximumFractionDigits: 0,
   });
   return `${type === 'income' ? '+' : '-'}${formatter.format(amount)}`;
 }

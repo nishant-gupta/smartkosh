@@ -291,11 +291,7 @@ export default function TransactionsPage() {
   }
   
   const formatAmount = (amount: number, type: string): string => {
-    const formatter = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    })
-    return `${type === 'income' ? '+' : '-'}${formatter.format(amount)}`
+    return `${type === 'income' ? '+' : '-'}₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
   }
   
   // Get unique categories for filter
