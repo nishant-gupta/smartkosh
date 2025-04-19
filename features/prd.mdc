@@ -1,0 +1,169 @@
+---
+description: project requirements
+globs: 
+alwaysApply: false
+---
+Okay, let's build a detailed requirements document for your AI-Powered Personal Finance Assistant. This document will serve as a blueprint for development.
+
+---
+
+**Requirements Document: AI-Powered Personal Finance Assistant**
+
+**Version:** 1.0
+**Date:** 2023-10-27
+**Author:** [Your Name/Team Name]
+
+**1. Introduction**
+
+*   **1.1 Purpose:** This document outlines the functional, non-functional, data, and technical requirements for building an AI-Powered Personal Finance Assistant. The assistant aims to help users track their finances, understand spending habits, assess their financial health, and receive personalized advice for better financial planning and improvement.
+*   **1.2 Project Goal:** To develop an intelligent, user-friendly application that empowers users to take control of their personal finances through automated data ingestion, insightful analysis, and actionable AI-driven recommendations.
+*   **1.3 Scope:**
+    *   **In Scope:**
+        *   User account management (registration, login, profile).
+        *   Manual entry of income, expenses, savings.
+        *   Ingestion and parsing of bank statements (initially focusing on common formats like PDF and CSV).
+        *   Secure connection to bank accounts via APIs (e.g., Plaid, Open Banking) for automated transaction fetching (as a potential future enhancement or parallel track).
+        *   Automated transaction categorization using AI/ML.
+        *   User ability to review and correct categorizations.
+        *   Tracking of income, expenses, savings, and net flow over time.
+        *   Visualization of financial trends (charts, graphs).
+        *   Calculation and display of a financial health score/indicators.
+        *   AI-driven analysis of spending patterns, identification of saving opportunities, and budget adherence (if budgeting feature is implemented).
+        *   Generation of personalized financial advice and tips.
+        *   Basic budgeting features (setting category limits).
+        *   Secure data storage and user privacy controls.
+    *   **Out of Scope (for initial version):**
+        *   Investment tracking and advice (beyond basic savings).
+        *   Tax calculation or filing assistance.
+        *   Loan application or management features.
+        *   Direct money movement or bill payment.
+        *   Detailed debt management strategies (beyond identifying debt payments as expenses).
+        *   Cryptocurrency tracking.
+*   **1.4 Target Audience:** Individuals seeking better visibility and control over their personal finances, who are comfortable using digital tools and potentially linking bank accounts or uploading statements.
+*   **1.5 Definitions & Glossary:**
+    *   **AI:** Artificial Intelligence
+    *   **ML:** Machine Learning
+    *   **Transaction:** Any recorded financial activity (income, expense, transfer).
+    *   **Categorization:** Assigning a transaction to a specific spending or income category (e.g., Groceries, Salary, Rent).
+    *   **Insight:** Meaningful information derived from data analysis (e.g., "You spent 30% more on dining out this month").
+    *   **Financial Health:** An assessment of a user's overall financial situation based on metrics like savings rate, debt-to-income ratio (simplified), spending patterns, etc.
+    *   **Bank Statement Ingestion:** Process of uploading and extracting transaction data from electronic bank statement files (PDF, CSV).
+    *   **API Aggregation:** Using services like Plaid or Open Banking standards to connect directly to bank accounts for automated data retrieval.
+
+**2. Functional Requirements**
+
+*   **2.1 User Management:**
+    *   `FR-USR-001`: System shall allow new users to register using an email address and password.
+    *   `FR-USR-002`: System shall securely authenticate registered users via login credentials.
+    *   `FR-USR-003`: System shall allow users to manage their profile information (e.g., name, email).
+    *   `FR-USR-004`: System shall provide a secure password recovery mechanism.
+    *   `FR-USR-005`: System shall allow users to delete their account and associated data permanently.
+*   **2.2 Data Input & Management:**
+    *   `FR-DAT-001`: System shall allow users to manually add income transactions (amount, date, source, category).
+    *   `FR-DAT-002`: System shall allow users to manually add expense transactions (amount, date, merchant/payee, category).
+    *   `FR-DAT-003`: System shall allow users to manually add savings/investment contributions (amount, date, account/goal).
+    *   `FR-DAT-004`: System shall provide an interface for users to upload bank statements in supported formats (initially PDF, CSV).
+    *   `FR-DAT-005`: System shall parse uploaded bank statements to extract transactions (date, description/merchant, amount - debit/credit). Error handling for unparseable files is required.
+    *   `FR-DAT-006`: System shall implement mechanisms to prevent duplicate transaction entries from manual input and statement uploads.
+    *   `FR-DAT-007`: (Optional/Future) System shall integrate with financial data aggregation APIs (e.g., Plaid) to securely link bank accounts and automatically fetch transactions.
+    *   `FR-DAT-008`: System shall allow users to view a list of all recorded transactions with filtering and sorting options (date range, category, account).
+    *   `FR-DAT-009`: System shall allow users to edit or delete manually entered transactions.
+*   **2.3 Transaction Categorization:**
+    *   `FR-CAT-001`: System shall automatically attempt to categorize extracted/fetched transactions using an AI/ML model based on merchant name, description, and potentially amount patterns.
+    *   `FR-CAT-002`: System shall provide a predefined set of common income and expense categories (e.g., Salary, Groceries, Utilities, Rent/Mortgage, Transportation, Dining Out, Entertainment).
+    *   `FR-CAT-003`: System shall allow users to create, edit, and delete custom categories.
+    *   `FR-CAT-004`: System shall allow users to review automatically assigned categories and easily change them if incorrect.
+    *   `FR-CAT-005`: The AI categorization model shall learn from user corrections to improve future accuracy for that user.
+    *   `FR-CAT-006`: Transactions that cannot be automatically categorized with high confidence shall be flagged for user review.
+*   **2.4 Financial Tracking & Visualization:**
+    *   `FR-TRK-001`: System shall provide a dashboard summarizing key financial information (e.g., current month's income vs. expense, recent transactions, savings overview, financial health indicator).
+    *   `FR-TRK-002`: System shall track total income, total expenses, and net cash flow (income - expenses) over selectable time periods (monthly, quarterly, yearly).
+    *   `FR-TRK-003`: System shall visualize spending trends by category over time using charts (e.g., pie charts for current period breakdown, bar/line charts for trends over time).
+    *   `FR-TRK-004`: System shall visualize income vs. expense trends over time.
+    *   `FR-TRK-005`: System shall track savings totals and progress towards user-defined savings goals (if implemented).
+*   **2.5 Budgeting:**
+    *   `FR-BUD-001`: System shall allow users to set monthly spending budgets for specific categories or overall spending.
+    *   `FR-BUD-002`: System shall display progress against budgets (amount spent vs. budget allocated) for the current period.
+    *   `FR-BUD-003`: System shall visually indicate when a budget is approaching or exceeding its limit.
+*   **2.6 AI-Powered Analysis & Insights:**
+    *   `FR-AI-001`: System shall analyze historical spending data to identify significant trends, patterns, and anomalies (e.g., sudden increase in a category, recurring subscriptions).
+    *   `FR-AI-002`: System shall calculate and display key financial health indicators (e.g., savings rate, spending distribution). The specific metrics need to be defined.
+    *   `FR-AI-003`: System shall generate personalized insights based on user data, such as:
+        *   Highlighting top spending categories.
+        *   Identifying potential areas for savings (e.g., high spending on non-essentials, duplicate subscriptions).
+        *   Comparing current spending to historical averages or budgets.
+    *   `FR-AI-004`: System shall provide actionable financial advice tailored to the user's situation (e.g., "Consider setting a budget for 'Dining Out' as it was 20% higher this month", "You're on track to meet your savings goal based on your current savings rate").
+    *   `FR-AI-005`: The AI recommendations should be presented clearly and explain the reasoning behind them (explainability).
+    *   `FR-AI-006`: System shall allow users to provide feedback on the usefulness of insights and advice.
+*   **2.7 Notifications (Optional but Recommended):**
+    *   `FR-NOT-001`: System shall optionally notify users about upcoming bill due dates (requires specific input or pattern recognition).
+    *   `FR-NOT-002`: System shall optionally notify users when they are close to exceeding a budget category.
+    *   `FR-NOT-003`: System shall optionally notify users of large or unusual transactions detected.
+
+**3. Non-Functional Requirements**
+
+*   **3.1 Performance:**
+    *   `NFR-PER-001`: Dashboard and key reports shall load within 3 seconds under typical load.
+    *   `NFR-PER-002`: Bank statement parsing shall provide feedback on progress for large files and complete within a reasonable timeframe (e.g., < 1 minute for typical statement sizes).
+    *   `NFR-PER-003`: AI analysis tasks running in the background should not noticeably degrade interactive performance.
+*   **3.2 Scalability:**
+    *   `NFR-SCA-001`: The system architecture shall support a growing number of users and transactions without significant degradation in performance. (Target: e.g., 10,000+ users, millions of transactions).
+*   **3.3 Reliability:**
+    *   `NFR-REL-001`: The system shall have high availability (e.g., 99.5% uptime).
+    *   `NFR-REL-002`: Financial calculations must be accurate. Automated tests are required to verify calculations.
+    *   `NFR-REL-003`: Data backups shall be performed regularly to prevent data loss.
+*   **3.4 Usability:**
+    *   `NFR-USA-001`: The user interface shall be intuitive, clean, and easy to navigate for non-expert users.
+    *   `NFR-USA-002`: Data visualizations shall be clear, understandable, and interactive where appropriate.
+    *   `NFR-USA-003`: Error messages shall be user-friendly and informative.
+*   **3.5 Security:**
+    *   `NFR-SEC-001`: All user data, especially financial information and credentials, must be encrypted both in transit (TLS/SSL) and at rest.
+    *   `NFR-SEC-002`: Secure password hashing algorithms must be used. Multi-Factor Authentication (MFA) should be considered.
+    *   `NFR-SEC-003`: If using API aggregators, industry best practices for storing API keys and tokens must be followed (e.g., secure vaults, tokenization). No raw bank login credentials should be stored by the application.
+    *   `NFR-SEC-004`: Regular security audits and vulnerability scanning shall be performed.
+    *   `NFR-SEC-005`: Access controls must ensure users can only access their own data.
+*   **3.6 Privacy:**
+    *   `NFR-PRI-001`: The system must comply with relevant data privacy regulations (e.g., GDPR, CCPA).
+    *   `NFR-PRI-002`: A clear privacy policy must be available to users.
+    *   `NFR-PRI-003`: Users must have control over their data, including the ability to export and delete it (`FR-USR-005`).
+    *   `NFR-PRI-004`: Anonymized and aggregated data may be used for improving AI models, but only if explicitly stated in the privacy policy and if de-identification is robust.
+*   **3.7 Maintainability:**
+    *   `NFR-MNT-001`: Code shall be well-documented, modular, and follow consistent coding standards.
+    *   `NFR-MNT-002`: The system should be designed to allow for future feature enhancements and updates to AI models.
+
+**4. Data Requirements**
+
+*   **4.1 User Data:** Profile information (ID, name, email hash, preferences).
+*   **4.2 Account Data:** Information about linked accounts (masked account number, type, institution - if using APIs) or manually defined accounts.
+*   **4.3 Transaction Data:** Date, amount, currency, description, merchant, assigned category, source (manual, statement, API), unique ID.
+*   **4.4 Category Data:** Predefined and user-defined category list.
+*   **4.5 Budget Data:** Budget limits per category/overall per period.
+*   **4.6 AI Model Data:**
+    *   Models for transaction categorization.
+    *   Models or rule sets for generating insights and recommendations.
+    *   User feedback data for model retraining/fine-tuning.
+*   **4.7 Data Storage:** A secure and scalable database solution is required (e.g., PostgreSQL, MongoDB with appropriate security configurations).
+
+**5. AI/ML Specific Requirements**
+
+*   **5.1 Categorization Model:**
+    *   `AI-CAT-001`: Develop or fine-tune an ML model (e.g., using NLP techniques like embeddings, classifiers like SVM, Naive Bayes, or deep learning) to predict transaction categories based on merchant/description text.
+    *   `AI-CAT-002`: The model must be trained on a relevant dataset (public financial transaction data, synthetically generated data, or potentially anonymized user data with consent).
+    *   `AI-CAT-003`: Define accuracy metrics (e.g., precision, recall, F1-score) and target performance levels for the categorization model.
+    *   `AI-CAT-004`: Implement a mechanism for retraining the model periodically and incorporating user feedback (`FR-CAT-005`).
+*   **5.2 Insights Engine:**
+    *   `AI-INS-001`: Develop algorithms (rule-based systems initially, potentially evolving to ML models) to identify patterns, anomalies, and generate insights (`FR-AI-001`, `FR-AI-003`).
+    *   `AI-INS-002`: Define the logic and parameters for calculating the financial health score (`FR-AI-002`).
+    *   `AI-INS-003`: Develop logic/models for generating personalized recommendations (`FR-AI-004`). This may involve analyzing spending relative to income, budgets, past behavior, and potentially peer groups (if using anonymized data).
+*   **5.3 Explainability:**
+    *   `AI-XAI-001`: AI-driven insights and recommendations should, where feasible, provide justification or context (`FR-AI-005`). For categorization, it might show keywords used; for advice, it might reference specific spending data.
+*   **5.4 Infrastructure:**
+    *   `AI-INF-001`: Select appropriate infrastructure for training and serving AI models (e.g., cloud ML platforms like AWS SageMaker, Google AI Platform, Azure ML, or self-hosted solutions).
+
+**6. User Interface (UI) / User Experience (UX) Requirements**
+
+*   `UIUX-001`: The application should be designed with a mobile-first approach or as a responsive web application accessible on various devices.
+*   `UIUX-002`: Navigation should be simple and consistent across the application.
+*   `UIUX-003`: Data visualizations must be responsive and render correctly on different screen sizes.
+*   `UIUX-004`: Provide clear feedback to the user during operations like data uploading, processing, and saving.
+*   `UIUX-005`: Onboarding process should guide new users on how to add data and use key features.

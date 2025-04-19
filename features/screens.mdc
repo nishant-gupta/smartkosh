@@ -1,0 +1,219 @@
+---
+description: all screens for MVP
+globs: 
+alwaysApply: false
+---
+Okay, let's define the essential screens for an MVP (Minimum Viable Product) based on the requirements document. The goal of the MVP is to deliver the core value proposition – tracking finances, seeing basic trends, and getting initial AI insights – with the minimum necessary features.
+
+We'll focus on manual entry and CSV upload first, as bank API integration adds significant complexity (security, cost, reliability).
+
+**MVP Screens:**
+
+1.  **Sign Up / Registration Screen**
+    *   **Purpose:** Allow new users to create an account.
+    *   **Key Elements:**
+        *   Email address input field.
+        *   Password input field (with confirmation).
+        *   "Sign Up" button.
+        *   Link to Login screen (for existing users).
+        *   Link to Privacy Policy and Terms of Service.
+    *   **Functionality:**
+        *   Validates email format.
+        *   Checks password strength requirements (e.g., minimum length).
+        *   Ensures password and confirmation match.
+        *   On successful validation, creates a new user account in the backend (`FR-USR-001`).
+        *   Handles potential errors (e.g., email already registered).
+        *   Logs the user in automatically and redirects to the Dashboard upon successful sign-up.
+    *   **Navigation:** Accessed by new users or via a link from the Login screen. Navigates to Dashboard on success, or shows error messages on failure.
+
+2.  **Login Screen**
+    *   **Purpose:** Allow registered users to access their account securely.
+    *   **Key Elements:**
+        *   Email address input field.
+        *   Password input field.
+        *   "Login" button.
+        *   Link to Sign Up screen (for new users).
+        *   "Forgot Password?" link (essential for usability, `FR-USR-004`).
+    *   **Functionality:**
+        *   Validates user credentials against the backend (`FR-USR-002`).
+        *   Handles successful login by creating a session and redirecting to the Dashboard.
+        *   Handles failed login attempts (e.g., incorrect credentials) with clear error messages.
+        *   Links to a password recovery flow (which might involve another simple screen/email process).
+    *   **Navigation:** Typically the entry point for returning users. Navigates to Dashboard on success, shows errors on failure, or navigates to Sign Up/Password Reset.
+
+3.  **Dashboard Screen (Home Screen after login)**
+    *   **Purpose:** Provide a quick, high-level overview of the user's current financial status and access key actions. This is the central hub.
+    *   **Key Elements:**
+        *   **Summary Metrics:** Display key figures for the current month (or selected period):
+            *   Total Income (`FR-TRK-002`)
+            *   Total Expenses (`FR-TRK-002`)
+            *   Net Flow (Income - Expenses) (`FR-TRK-002`)
+        *   **Quick Spending Overview:** A simple chart (e.g., Pie or Bar chart) showing spending breakdown by top categories for the current month (`FR-TRK-003`).
+        *   **Recent Transactions:** A short list (e.g., last 5) of the most recent transactions (both income and expense).
+        *   **"Add Transaction" Button:** Quick access to the Add Transaction screen/modal (`FR-DAT-001`, `FR-DAT-002`).
+        *   **"Upload Statement" Button:** Access to the statement upload functionality (`FR-DAT-004`).
+        *   **(MVP AI Insight):** A small section displaying 1-2 simple, AI-generated insights (e.g., "Your spending on 'Dining Out' is up 15% this month compared to last month.", "You saved X% of your income this month.") (`FR-AI-001`, `FR-AI-003`).
+        *   **Navigation Menu:** Links to other main sections (Transactions List, Settings).
+    *   **Functionality:**
+        *   Fetches and displays summary data based on the user's transactions for the default period.
+        *   Provides clear visual representation of spending distribution.
+        *   Allows quick navigation to add data or view details.
+        *   Presents initial AI insights.
+    *   **Navigation:** The primary screen after login. Links to Add Transaction, Upload Statement (modal/flow), Transactions List, Settings.
+
+4.  **Add/Edit Transaction Screen (Could be a Modal)**
+    *   **Purpose:** Allow users to manually input or edit individual income or expense transactions.
+    *   **Key Elements:**
+        *   Toggle/Selector for Transaction Type (Income/Expense).
+        *   Amount input field.
+        *   Date selector (defaults to today).
+        *   Description/Merchant input field.
+        *   Category selector (dropdown/searchable list of predefined categories `FR-CAT-002`, potentially showing AI suggestion if editing an uploaded transaction `FR-CAT-001`).
+        *   (Optional) Notes field.
+        *   "Save Transaction" button.
+        *   "Cancel" button.
+        *   (If Editing) "Delete Transaction" button (`FR-DAT-009`).
+    *   **Functionality:**
+        *   Validates input fields (e.g., amount is numeric).
+        *   Saves new transaction data to the backend (`FR-DAT-001`, `FR-DAT-002`).
+        *   Updates existing transaction data if in edit mode.
+        *   Allows deletion of the transaction.
+        *   Upon saving/deleting, typically navigates back to the previous screen (e.g., Transactions List or Dashboard) and refreshes the data.
+    *   **Navigation:** Accessed via the "Add Transaction" button (on Dashboard or Transactions List) or by clicking an "Edit" icon on a transaction in the Transactions List. Returns to the originating screen on save/cancel/delete.
+
+5.  **Transactions List Screen**
+    *   **Purpose:** Allow users to view, filter, sort, and manage all their recorded transactions.
+    *   **Key Elements:**
+        *   **List/Table of Transactions:** Displaying Date, Description/Merchant, Category, Amount (clearly indicating income vs. expense, e.g., using color or +/- sign).
+        *   **Filtering Options:** (Basic MVP) Filter by date range (e.g., This Month, Last Month, Custom Range). Maybe filter by Category or Type (Income/Expense).
+        *   **Sorting Options:** Sort by Date (default), Amount, Category.
+        *   **Edit/Delete Icons:** An icon or button next to each transaction (especially manually added ones) to open the Add/Edit Transaction screen for that item (`FR-DAT-008`, `FR-DAT-009`).
+        *   **Review Category Prompt:** For transactions from uploaded statements where the AI categorization confidence is low or needs confirmation (`FR-CAT-006`), visually flag these and allow easy clicking to confirm/change the category (`FR-CAT-004`).
+        *   (Optional) Running balance (can be complex, maybe omit for MVP).
+        *   "Add Transaction" button (convenience).
+    *   **Functionality:**
+        *   Fetches and displays transactions based on selected filters/sorting.
+        *   Allows users to scroll through their financial history.
+        *   Provides the primary interface for reviewing and correcting automatically categorized transactions from uploads.
+        *   Initiates the editing or deletion flow for a transaction.
+    *   **Navigation:** Accessed from the main navigation menu. Links to the Add/Edit Transaction screen.
+
+6.  **Statement Upload Screen/Flow (Could be initiated from Dashboard/Transactions)**
+    *   **Purpose:** Allow users to upload bank statement files (CSV initially for MVP simplicity).
+    *   **Key Elements:**
+        *   File Input/Selector button (restricted to .csv).
+        *   Instructions on expected CSV format (e.g., columns needed: Date, Description, Amount or Debit/Credit).
+        *   "Upload & Process" button.
+        *   Progress indicator during upload and parsing.
+        *   Feedback area for success or error messages (e.g., "File uploaded successfully, X transactions extracted", "Error: Could not parse file, please check format").
+    *   **Functionality:**
+        *   Handles file selection and upload (`FR-DAT-004`).
+        *   Initiates backend processing to parse the CSV, extract transactions, attempt auto-categorization (`FR-DAT-005`, `FR-CAT-001`), and check for duplicates (`FR-DAT-006`).
+        *   Provides feedback to the user on the outcome.
+        *   On success, might redirect to the Transactions List screen, highlighting the newly imported transactions for review.
+    *   **Navigation:** Accessed via an "Upload Statement" button (e.g., on Dashboard). Shows feedback during processing. Navigates ideally to the Transactions List upon completion, or stays on the page with error messages if failed.
+
+7.  **Settings Screen**
+    *   **Purpose:** Allow users to manage their account and application settings.
+    *   **Key Elements:**
+        *   **Profile Management:** View registered email, option to change password (`FR-USR-003`).
+        *   **(Lower Priority MVP):** Manage Categories: View predefined categories, potentially add custom ones (or defer `FR-CAT-003` post-MVP).
+        *   **Data Management:**
+            *   Option to Export Data (e.g., as CSV) (`NFR-PRI-003`).
+            *   Option to Delete Account and all associated data (`FR-USR-005`, `NFR-PRI-003`). Requires prominent warning and confirmation.
+        *   **Logout Button:** Securely ends the user session.
+    *   **Functionality:**
+        *   Allows password updates.
+        *   Allows user data export.
+        *   Provides the mechanism for account deletion (critical for privacy).
+        *   Handles user logout.
+    *   **Navigation:** Accessed from the main navigation menu. Contains sub-sections or actions for profile, data, etc. Logout redirects to the Login screen.
+
+Okay, let's detail the screens for uploading transaction files (CSV/PDF) and for linking bank accounts using a third-party aggregator like Plaid.
+
+**1. Upload Transactions Screen**
+
+*   **Purpose:** To allow users to upload bank or credit card statement files (CSV or PDF) for transaction extraction and import into the assistant. This screen centralizes file-based imports.
+*   **Key Elements:**
+    *   **Screen Title:** "Import Transactions from File" or "Upload Statement".
+    *   **Instructions:** Clear, concise instructions on supported file types and formats:
+        *   "Supported formats: CSV, PDF."
+        *   **For CSV:** "Please ensure your CSV file has columns for Date, Description (or Payee/Merchant), and Amount. A single 'Amount' column (with negative values for expenses) is preferred, but separate 'Debit' and 'Credit' columns are also supported. [Optional: Link to a downloadable CSV template/example]." (`FR-DAT-004`)
+        *   **For PDF:** "Upload your official bank or credit card statement PDF. Accuracy depends on the statement's layout and clarity. Processing may take a minute or two." (`FR-DAT-004`)
+    *   **File Input Area:**
+        *   A "Choose File" or "Drag and Drop" area clearly indicating accepted formats (.csv, .pdf).
+        *   Displays the selected filename once chosen.
+    *   **(Optional) Account Selection:** A dropdown to associate the uploaded statement with a specific account the user might have manually set up (e.g., "My Checking Account," "Visa Credit Card"). If omitted, the system might try to infer or prompt later.
+    *   **"Upload & Process" Button:** Initiates the upload and backend processing. Should be disabled until a file is selected.
+    *   **Processing Indicator:** Visual feedback during processing:
+        *   Shows stages like "Uploading file...", "Parsing data...", "Extracting transactions...", "Checking for duplicates...", "Categorizing transactions...". A progress bar or spinner is useful here (`NFR-PER-002`).
+    *   **Results/Feedback Area:** Displays the outcome after processing:
+        *   **Success:** "Success! Imported X transactions. Y transactions require category review." [Link to Transactions List, potentially filtered].
+        *   **Partial Success:** "Imported X transactions. Could not parse Y rows/transactions. Please review the file."
+        *   **Failure:** "Error: File format not recognized.", "Error: Could not read PDF.", "Error: Invalid CSV structure. Please check column headers.", "Upload failed. Please try again." (`FR-DAT-005`).
+    *   **Duplicate Handling Info:** (Optional but helpful) A small note: "We automatically check for duplicates based on date, amount, and description to avoid double entries." (`FR-DAT-006`)
+*   **Functionality:**
+    *   Handles file selection (client-side type validation).
+    *   Securely uploads the file to the backend server.
+    *   Triggers backend processes: file type detection, parsing (CSV reader or PDF parser/OCR), transaction data extraction, duplicate detection, initial AI categorization (`FR-CAT-001`).
+    *   Updates the UI with processing status and final results.
+    *   Stores successfully extracted and non-duplicate transactions in the database. Flags transactions needing category review (`FR-CAT-006`).
+*   **Navigation:**
+    *   Accessed typically from the Dashboard ("Upload Statement" button) or Transactions List screen.
+    *   On success, might offer a button/link to navigate to the Transactions List (ideally filtered to show the new imports).
+    *   On failure, stays on the screen displaying the error message, allowing the user to try again with a different file or format.
+
+**2. Link Bank Account Flow (Multi-Screen Process via Aggregator)**
+
+This functionality (`FR-DAT-007`) relies heavily on integrating a third-party service (like Plaid, Finicity, etc.). The user interface elements for credential entry and MFA are *provided by the aggregator's secure SDK/widget* (e.g., Plaid Link) to ensure your application never handles sensitive bank logins (`NFR-SEC-003`).
+
+*   **Screen 2.1: Manage Linked Accounts / Initiate Linking**
+    *   **Purpose:** Show users their currently connected bank accounts and allow them to initiate the process of linking a new one.
+    *   **Key Elements:**
+        *   **Screen Title:** "Linked Accounts" or "Connect Your Banks".
+        *   **Trust & Security Message:** Prominent text explaining the security: "We partner with [Aggregator Name, e.g., Plaid] to securely connect your accounts. Your bank login details are never stored by us." [Link to aggregator's security policy]. (`NFR-SEC-003`)
+        *   **List of Linked Accounts:** (If any exist) Displays:
+            *   Bank Logo/Name.
+            *   Masked Account Number(s) (e.g., ****1234).
+            *   Account Type(s) (e.g., Checking, Savings, Credit Card).
+            *   Connection Status (e.g., "Connected," "Syncing," "Needs Attention/Re-authentication").
+            *   Last Refreshed Timestamp.
+            *   Option to "Unlink" or "Remove" account.
+        *   **"Link New Account" / "Connect Bank" Button:** The primary call to action to start the linking process.
+    *   **Functionality:**
+        *   Displays the status of existing connections.
+        *   Clicking "Link New Account" initializes the third-party aggregator's SDK/flow.
+        *   Handles unlinking requests (revokes access tokens on the backend).
+    *   **Navigation:** Usually accessed from Settings, or possibly a prompt on the Dashboard if no accounts are linked yet. Clicking "Link New Account" transitions to the Aggregator's UI flow (Screens 2.2 - 2.4).
+
+*   **Screen 2.2 - 2.4: Aggregator's UI Flow (e.g., Plaid Link)**
+    *   **Purpose:** Securely guide the user through selecting their bank, entering credentials, handling Multi-Factor Authentication (MFA), and selecting specific accounts to link. **These screens are rendered by the third-party SDK, not directly by your application.**
+    *   **Key Elements (Rendered by Aggregator SDK):**
+        *   **Bank Selection:** Search bar and list/grid of financial institutions with logos.
+        *   **Credential Entry:** Secure form fields for Username/ID and Password, presented within the aggregator's secure environment (often an iframe or webview).
+        *   **MFA Handling:** Prompts for security codes (SMS, email, authenticator app), security questions, etc., as required by the user's bank.
+        *   **Account Selection:** (If applicable) Checkboxes next to the accounts (Checking, Savings, Credit Card) found at the institution, allowing the user to choose which ones to share data from.
+        *   **Consent Screen:** Clearly stating what data will be accessed (account balances, transaction history) and by whom (your app name).
+    *   **Functionality (Handled by Aggregator):**
+        *   Securely collects credentials and passes them to the bank (never via your servers).
+        *   Manages the entire authentication and MFA process.
+        *   Obtains user consent.
+        *   On success, exchanges credentials for secure access tokens that *are* passed back to your application's backend.
+        *   Returns success/failure status and necessary identifiers (tokens, account IDs) to your application via callbacks.
+    *   **Navigation:** This flow is self-contained within the aggregator's SDK. It starts when the user clicks "Link New Account" on Screen 2.1 and ends by triggering a callback (success or failure) to your application, leading to Screen 2.5.
+
+*   **Screen 2.5: Linking Success / Failure Feedback (Within Your App)**
+    *   **Purpose:** To inform the user about the outcome of the bank linking attempt after the aggregator flow completes.
+    *   **Key Elements:**
+        *   **Clear Title/Message:**
+            *   **Success:** "Account Linked Successfully!" or "[Bank Name] Connected!" - "We are now fetching your initial transaction history. This may take a few minutes."
+            *   **Failure:** "Account Linking Failed." - Provide a user-friendly reason if possible (e.g., "Incorrect login details provided.", "Connection timed out.", "Bank connection temporarily unavailable. Please try again later.") Avoid overly technical jargon.
+        *   **(Success):** Maybe a visual cue like the bank's logo.
+        *   **Call to Action Button:**
+            *   **Success:** "Go to Dashboard" or "View Linked Accounts".
+            *   **Failure:** "Try Again" (re-launches the aggregator flow) or "Cancel" / "Back to Linked Accounts".
+    *   **Functionality:**
+        *   Displays the status received from the aggregator's callback.
+        *   On success, the backend securely stores the received access tokens and initiates the first data fetch (transactions, account balances) from the bank via the aggregator's API.
+        *   Guides the user on the next steps.
+    *   **Navigation:** Appears immediately after the aggregator's UI flow closes. Navigates the user back to the "Manage Linked Accounts" screen (Screen 2.1) or the main Dashboard.
