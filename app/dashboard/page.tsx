@@ -72,7 +72,7 @@ interface Transaction {
   description: string;
   category: string;
   date: string;
-  type: 'income' | 'expense' | 'transfer';
+  type: 'income' | 'expense' | 'saving' | 'transfer';
   notes?: string;
 }
 
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('month')
+  const [activeTab, setActiveTab] = useState<'week' | 'month' | 'year'>('month')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
@@ -116,9 +116,11 @@ export default function Dashboard() {
   const [financialSummary, setFinancialSummary] = useState({
     totalIncome: 0,
     totalExpenses: 0,
+    totalSavings: 0,
     netFlow: 0,
     incomeTrend: '+0%',
     expensesTrend: '+0%',
+    savingsTrend: '+0%',
     netFlowTrend: '+0%'
   })
   
@@ -132,6 +134,17 @@ export default function Dashboard() {
   
   // Additional state for pie chart hover functionality
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  
+  // Add a new state for the overview tab selection
+  const [activeOverviewTab, setActiveOverviewTab] = useState<'financial' | 'spending' | 'savings'>('financial')
+  
+  // Add state for savings categories
+  const [savingsByCategory, setSavingsByCategory] = useState<{ 
+    category: string; 
+    amount: number; 
+    percentage: number; 
+    color: string 
+  }[]>([]);
   
   // Define category colors
   const categoryColors: Record<string, string> = {
@@ -215,9 +228,13 @@ export default function Dashboard() {
       // Calculate totals
       let totalIncome = 0;
       let totalExpenses = 0;
+      let totalSavings = 0;
       
       // Track spending by category
       const categories: Record<string, number> = {};
+      
+      // Track savings by category
+      const savingsCategories: Record<string, number> = {};
       
       periodTransactions.forEach((transaction: Transaction) => {
         if (transaction.type === 'income') {
@@ -228,18 +245,29 @@ export default function Dashboard() {
           // Add to category totals for expenses only
           const category = transaction.category || 'Other';
           categories[category] = (categories[category] || 0) + transaction.amount;
+        } else if (transaction.type === 'saving') {
+          totalSavings += transaction.amount;
+          
+          // Add to savings category totals
+          const category = transaction.category || 'Other';
+          savingsCategories[category] = (savingsCategories[category] || 0) + transaction.amount;
+        } else if (transaction.type === 'transfer') {
+          // Transfers don't affect income/expense totals or category breakdown
+          // They just move money between accounts
         }
       });
       
-      const netFlow = totalIncome - totalExpenses;
+      const netFlow = totalIncome - totalExpenses - totalSavings;
       
       // For now, we'll set static trends until we implement historical comparison
       setFinancialSummary({
         totalIncome,
         totalExpenses,
+        totalSavings,
         netFlow,
         incomeTrend: '+12%',  // These would ideally be calculated from previous month's data
         expensesTrend: '+8%',
+        savingsTrend: '+15%',
         netFlowTrend: netFlow > 0 ? '+23%' : '-10%'
       });
       
@@ -274,9 +302,45 @@ export default function Dashboard() {
       } else {
         setCategorySpending([]);
       }
+      
+      // Calculate savings category percentages and prepare for display
+      if (totalSavings > 0) {
+        const savingsCategoryData = Object.entries(savingsCategories)
+          .map(([category, amount]) => ({
+            category,
+            amount,
+            percentage: Math.round((amount / totalSavings) * 100),
+            color: categoryColors[category] || getSavingCategoryColor(category)
+          }))
+          .sort((a, b) => b.amount - a.amount); // Sort by amount descending
+        
+        setSavingsByCategory(savingsCategoryData);
+      } else {
+        setSavingsByCategory([]);
+      }
     } catch (error) {
       console.error('Error fetching financial summary:', error);
     }
+  };
+  
+  // Helper function to assign colors to savings categories
+  const getSavingCategoryColor = (category: string): string => {
+    // Default savings category colors if not found in main categoryColors
+    const savingCategoryColors: Record<string, string> = {
+      'Investments': 'bg-blue-600',
+      'Bank Savings': 'bg-blue-400',
+      'Fixed Deposit': 'bg-cyan-600',
+      'Retirement': 'bg-indigo-600',
+      'Emergency Fund': 'bg-purple-600',
+      'Education Fund': 'bg-violet-500',
+      'Stock Market': 'bg-teal-600',
+      'Mutual Funds': 'bg-sky-500',
+      'Gold': 'bg-amber-500',
+      'Real Estate': 'bg-emerald-600',
+      'Other': 'bg-blue-300'
+    };
+    
+    return savingCategoryColors[category] || 'bg-blue-500';
   };
   
   useEffect(() => {
@@ -533,7 +597,7 @@ export default function Dashboard() {
         </div>
         
         {/* Financial summary cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6">
           <SummaryCard 
             title="TOTAL INCOME" 
             amount={formatCurrency(financialSummary.totalIncome)} 
@@ -558,13 +622,24 @@ export default function Dashboard() {
             } 
           />
           <SummaryCard 
+            title="TOTAL SAVINGS" 
+            amount={formatCurrency(financialSummary.totalSavings)} 
+            trend={financialSummary.savingsTrend} 
+            period="vs last month" 
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            } 
+          />
+          <SummaryCard 
             title="NET FLOW" 
             amount={formatCurrency(financialSummary.netFlow)} 
             trend={financialSummary.netFlowTrend}
             trendColor={financialSummary.netFlow >= 0 ? "text-green-600" : "text-red-600"}
             period="vs last month" 
             icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
             } 
@@ -575,7 +650,26 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
           <div className="lg:col-span-2 bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b">
-              <h2 className="font-semibold mb-2 sm:mb-0">Spending Overview</h2>
+              <div className="flex space-x-1 bg-gray-100 rounded-md p-1 mb-3 sm:mb-0">
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${activeOverviewTab === 'financial' ? 'bg-white shadow-sm' : ''}`}
+                  onClick={() => setActiveOverviewTab('financial')}
+                >
+                  Financial Overview
+                </button>
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${activeOverviewTab === 'spending' ? 'bg-white shadow-sm' : ''}`}
+                  onClick={() => setActiveOverviewTab('spending')}
+                >
+                  Spending Overview
+                </button>
+                <button 
+                  className={`px-3 py-1 text-sm rounded-md ${activeOverviewTab === 'savings' ? 'bg-white shadow-sm' : ''}`}
+                  onClick={() => setActiveOverviewTab('savings')}
+                >
+                  Savings Overview
+                </button>
+              </div>
               <div className="flex space-x-1 bg-gray-100 rounded-md p-1 w-full sm:w-auto">
                 <button 
                   className={`px-3 py-1 text-sm rounded-md ${activeTab === 'week' ? 'bg-white shadow-sm' : ''}`}
@@ -597,89 +691,283 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
-            <div className="p-4 flex flex-col md:flex-row">
-              <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
-                <div className="w-48 h-48 relative">
-                  {categorySpending.length > 0 ? (
-                    <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                      {/* Create pie slices */}
-                      {categorySpending.map((category, index) => {
-                        // Calculate the slice position
-                        let previousPercentage = 0;
-                        for (let i = 0; i < index; i++) {
-                          previousPercentage += categorySpending[i].percentage;
-                        }
-                        
-                        // Convert percentages to coordinates on a circle
-                        const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
-                        const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
-                        
-                        const endPercentage = previousPercentage + category.percentage;
-                        const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
-                        const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
-                        
-                        // Flag for large arc (> 180 degrees)
-                        const largeArcFlag = category.percentage > 50 ? 1 : 0;
-                        
-                        // Create SVG arc path
-                        const path = `
-                          M 50 50
-                          L ${startX} ${startY}
-                          A 40 40 0 ${largeArcFlag} 1 ${endX} ${endY}
-                          Z
-                        `;
-                        
-                        // Get color from Tailwind class to hex mapping
-                        const hexColor = tailwindToHex[category.color] || "#9ca3af";
-                        
-                        return (
-                          <path
-                            key={category.category}
-                            d={path}
-                            fill={hexColor}
-                            className="hover:opacity-90 transition-opacity duration-200"
-                            onMouseEnter={() => setHoveredCategory(category.category)}
-                            onMouseLeave={() => setHoveredCategory(null)}
-                            stroke="#fff"
-                            strokeWidth="1"
+            
+            {/* Financial Overview Tab */}
+            {activeOverviewTab === 'financial' && (
+              <div className="p-4">
+                <h3 className="font-medium mb-4">Income vs Expenses vs Savings</h3>
+                <div className="flex flex-col md:flex-row">
+                  <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
+                    <div className="w-48 h-48 relative">
+                      {financialSummary.totalIncome > 0 || financialSummary.totalExpenses > 0 || financialSummary.totalSavings > 0 ? (
+                        <svg viewBox="0 0 100 100" className="w-full h-full">
+                          {/* Create concentric rings/donut chart */}
+                          {/* Outer ring (Income) */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="40" 
+                            fill="transparent" 
+                            stroke="#10B981" 
+                            strokeWidth="10"
+                            strokeDasharray="251.2"
+                            strokeDashoffset="0"
                           />
-                        );
-                      })}
-                      
-                      {/* White circle in the middle for donut effect */}
-                      <circle cx="50" cy="50" r="25" fill="white" />
-                    </svg>
-                  ) : (
-                    <>
-                      <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
-                      <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
-                        No expense data yet
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="w-full md:w-1/2">
-                <div className="space-y-4">
-                  {categorySpending.length > 0 ? (
-                    categorySpending.map((category, index) => (
-                      <CategoryItem 
-                        key={index}
-                        category={category.category} 
-                        amount={formatCurrency(category.amount)} 
-                        percentage={category.percentage} 
-                        color={category.color}
-                        isHighlighted={hoveredCategory === category.category} 
-                      />
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500">
-                      No expenses in this period
+                          
+                          {/* Middle ring (Expenses) */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="30" 
+                            fill="transparent" 
+                            stroke="#EF4444" 
+                            strokeWidth="10"
+                            strokeDasharray="188.4"
+                            strokeDashoffset={financialSummary.totalIncome > 0 ? 
+                              (1 - financialSummary.totalExpenses / financialSummary.totalIncome) * 188.4 : 0}
+                          />
+                          
+                          {/* Inner ring (Savings) */}
+                          <circle 
+                            cx="50" 
+                            cy="50" 
+                            r="20" 
+                            fill="transparent" 
+                            stroke="#3B82F6" 
+                            strokeWidth="10"
+                            strokeDasharray="125.6"
+                            strokeDashoffset={financialSummary.totalIncome > 0 ? 
+                              (1 - financialSummary.totalSavings / financialSummary.totalIncome) * 125.6 : 0}
+                          />
+                          
+                          {/* Labels */}
+                          <text x="50" y="50" fontSize="10" textAnchor="middle" fill="#4B5563" dominantBaseline="middle">
+                            Financial
+                          </text>
+                        </svg>
+                      ) : (
+                        <>
+                          <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
+                          <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                            No financial data yet
+                          </div>
+                        </>
+                      )}
                     </div>
-                  )}
+                  </div>
+                  <div className="w-full md:w-1/2">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded bg-green-500 mr-2"></div>
+                          <span className="text-sm">Income (Outer Ring)</span>
+                        </div>
+                        <span className="font-medium">{formatCurrency(financialSummary.totalIncome)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded bg-red-500 mr-2"></div>
+                          <span className="text-sm">Expenses (Middle Ring)</span>
+                        </div>
+                        <span className="font-medium">{formatCurrency(financialSummary.totalExpenses)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded bg-blue-500 mr-2"></div>
+                          <span className="text-sm">Savings (Inner Ring)</span>
+                        </div>
+                        <span className="font-medium">{formatCurrency(financialSummary.totalSavings)}</span>
+                      </div>
+                      <div className="pt-2 mt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded bg-purple-500 mr-2"></div>
+                            <span className="text-sm">Net Flow</span>
+                          </div>
+                          <span className={`font-medium ${financialSummary.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(financialSummary.netFlow)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+            
+            {/* Spending Overview Tab */}
+            {activeOverviewTab === 'spending' && (
+              <div className="p-4 flex flex-col md:flex-row">
+                <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
+                  <div className="w-48 h-48 relative">
+                    {categorySpending.length > 0 ? (
+                      <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                        {/* Create pie slices */}
+                        {categorySpending.map((category, index) => {
+                          // Calculate the slice position
+                          let previousPercentage = 0;
+                          for (let i = 0; i < index; i++) {
+                            previousPercentage += categorySpending[i].percentage;
+                          }
+                          
+                          // Convert percentages to coordinates on a circle
+                          const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
+                          const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
+                          
+                          const endPercentage = previousPercentage + category.percentage;
+                          const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
+                          const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
+                          
+                          // Flag for large arc (> 180 degrees)
+                          const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                          
+                          // Create SVG arc path
+                          const path = `
+                            M 50 50
+                            L ${startX} ${startY}
+                            A 40 40 0 ${largeArcFlag} 1 ${endX} ${endY}
+                            Z
+                          `;
+                          
+                          // Get color from Tailwind class to hex mapping
+                          const hexColor = tailwindToHex[category.color] || "#9ca3af";
+                          
+                          return (
+                            <path
+                              key={category.category}
+                              d={path}
+                              fill={hexColor}
+                              className="hover:opacity-90 transition-opacity duration-200"
+                              onMouseEnter={() => setHoveredCategory(category.category)}
+                              onMouseLeave={() => setHoveredCategory(null)}
+                              stroke="#fff"
+                              strokeWidth="1"
+                            />
+                          );
+                        })}
+                        
+                        {/* White circle in the middle for donut effect */}
+                        <circle cx="50" cy="50" r="25" fill="white" />
+                      </svg>
+                    ) : (
+                      <>
+                        <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
+                        <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                          No expense data yet
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2">
+                  <div className="space-y-4">
+                    {categorySpending.length > 0 ? (
+                      categorySpending.map((category, index) => (
+                        <CategoryItem 
+                          key={index}
+                          category={category.category} 
+                          amount={formatCurrency(category.amount)} 
+                          percentage={category.percentage} 
+                          color={category.color}
+                          isHighlighted={hoveredCategory === category.category} 
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        No expenses in this period
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Savings Overview Tab */}
+            {activeOverviewTab === 'savings' && (
+              <div className="p-4 flex flex-col md:flex-row">
+                <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
+                  <div className="w-48 h-48 relative">
+                    {savingsByCategory.length > 0 ? (
+                      <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                        {/* Create pie slices */}
+                        {savingsByCategory.map((category, index) => {
+                          // Calculate the slice position
+                          let previousPercentage = 0;
+                          for (let i = 0; i < index; i++) {
+                            previousPercentage += savingsByCategory[i].percentage;
+                          }
+                          
+                          // Convert percentages to coordinates on a circle
+                          const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
+                          const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
+                          
+                          const endPercentage = previousPercentage + category.percentage;
+                          const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
+                          const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
+                          
+                          // Flag for large arc (> 180 degrees)
+                          const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                          
+                          // Create SVG arc path
+                          const path = `
+                            M 50 50
+                            L ${startX} ${startY}
+                            A 40 40 0 ${largeArcFlag} 1 ${endX} ${endY}
+                            Z
+                          `;
+                          
+                          // Get color from Tailwind class to hex mapping - use category specific colors
+                          const hexColor = tailwindToHex[category.color] || "#3B82F6";
+                          
+                          return (
+                            <path
+                              key={category.category}
+                              d={path}
+                              fill={hexColor}
+                              className="hover:opacity-90 transition-opacity duration-200"
+                              onMouseEnter={() => setHoveredCategory(category.category)}
+                              onMouseLeave={() => setHoveredCategory(null)}
+                              stroke="#fff"
+                              strokeWidth="1"
+                            />
+                          );
+                        })}
+                        
+                        {/* White circle in the middle for donut effect */}
+                        <circle cx="50" cy="50" r="25" fill="white" />
+                      </svg>
+                    ) : (
+                      <>
+                        <div className="w-full h-full rounded-full border-8 border-gray-200"></div>
+                        <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
+                          No savings data yet
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="w-full md:w-1/2">
+                  <div className="space-y-4">
+                    {savingsByCategory.length > 0 ? (
+                      savingsByCategory.map((category, index) => (
+                        <CategoryItem 
+                          key={index}
+                          category={category.category} 
+                          amount={formatCurrency(category.amount)} 
+                          percentage={category.percentage} 
+                          color={category.color}
+                          isHighlighted={hoveredCategory === category.category} 
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        No savings in this period
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="bg-white rounded-lg shadow-sm">
             <div className="flex justify-between items-center p-4 border-b">
@@ -803,7 +1091,7 @@ function NavItem({ children, href, icon, isActive = false }: NavItemProps) {
     ),
     budget: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
     ),
     insights: (
@@ -993,7 +1281,7 @@ function getTransactionIcon(category: string): JSX.Element {
     'Education': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />),
     'Travel': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />),
     'Investments': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />),
-    'Salary': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />),
+    'Salary': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />),
     'Business': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />),
     'Gifts & Donations': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112.83 1.83l-2.83 2.83m0-8a2 2 0 100 4 2 2 0 000-4zm0 0l-8 6h16l-8-6z" />),
     'Income': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />),

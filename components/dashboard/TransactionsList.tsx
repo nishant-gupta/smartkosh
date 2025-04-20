@@ -7,7 +7,7 @@ interface Transaction {
   description: string
   amount: number
   category: string
-  type: 'income' | 'expense' | 'transfer'
+  type: 'income' | 'expense' | 'transfer' | 'saving'
   accountId: string
   account?: {
     name: string
@@ -113,7 +113,13 @@ export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-sm font-medium ${
+                  transaction.type === 'income' 
+                    ? 'text-green-600' 
+                    : transaction.type === 'saving' 
+                      ? 'text-blue-600' 
+                      : 'text-red-600'
+                }`}>
                   {transaction.type === 'income' ? '+' : '-'}₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(transaction.amount))}
                 </span>
                 {onEdit && (

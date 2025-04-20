@@ -20,7 +20,7 @@ interface TransactionModalProps {
     description: string;
     category: string;
     date: string;
-    type: 'income' | 'expense' | 'transfer';
+    type: 'income' | 'expense' | 'saving' | 'transfer';
     notes?: string;
   };
   mode: 'add' | 'edit';
@@ -56,6 +56,20 @@ const INCOME_CATEGORIES = [
   'Other'
 ];
 
+const SAVING_CATEGORIES = [
+  'Investments',
+  'Bank Savings',
+  'Fixed Deposit',
+  'Retirement',
+  'Emergency Fund',
+  'Education Fund',
+  'Stock Market',
+  'Mutual Funds',
+  'Gold',
+  'Real Estate',
+  'Other'
+];
+
 export default function TransactionModal({ 
   isOpen, 
   onClose, 
@@ -74,7 +88,7 @@ export default function TransactionModal({
     description: '',
     category: '',
     date: new Date().toISOString().slice(0, 10),
-    type: 'expense' as 'income' | 'expense' | 'transfer',
+    type: 'expense' as 'income' | 'expense' | 'saving' | 'transfer',
     notes: ''
   });
 
@@ -150,7 +164,7 @@ export default function TransactionModal({
   };
 
   // Handle transaction type change
-  const handleTypeChange = (type: 'income' | 'expense' | 'transfer') => {
+  const handleTypeChange = (type: 'income' | 'expense' | 'saving' | 'transfer') => {
     setFormData(prev => ({
       ...prev,
       type,
@@ -339,14 +353,14 @@ export default function TransactionModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTypeChange('transfer')}
+                  onClick={() => handleTypeChange('saving')}
                   className={`flex-1 py-2 px-4 focus:outline-none ${
-                    formData.type === 'transfer' 
+                    formData.type === 'saving' 
                       ? 'bg-blue-500 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Transfer
+                  Savings
                 </button>
               </div>
             </div>
@@ -460,7 +474,11 @@ export default function TransactionModal({
                     </option>
                   ))
                 ) : (
-                  <option value="Transfer">Transfer</option>
+                  SAVING_CATEGORIES.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))
                 )}
               </select>
             </div>

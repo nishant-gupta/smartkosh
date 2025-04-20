@@ -22,7 +22,7 @@ interface Transaction {
   description: string;
   category: string;
   date: string;
-  type: 'income' | 'expense' | 'transfer';
+  type: 'income' | 'expense' | 'saving';
   notes?: string;
   aiReviewNeeded?: boolean;
 }
@@ -30,7 +30,7 @@ interface Transaction {
 // Filter options
 type DateFilter = 'this-month' | 'last-month' | 'this-year' | 'custom';
 type CategoryFilter = 'all' | string;
-type TypeFilter = 'all' | 'income' | 'expense' | 'transfer';
+type TypeFilter = 'all' | 'income' | 'expense' | 'saving';
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'category';
 
 export default function TransactionsPage() {
@@ -291,7 +291,13 @@ export default function TransactionsPage() {
   }
   
   const formatAmount = (amount: number, type: string): string => {
-    return `${type === 'income' ? '+' : '-'}₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
+    if (type === 'income') {
+      return `+₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
+    } else if (type === 'saving') {
+      return `→₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
+    } else {
+      return `-₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
+    }
   }
   
   // Get unique categories for filter
@@ -506,7 +512,7 @@ export default function TransactionsPage() {
                 <option value="all">All Types</option>
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
-                <option value="transfer">Transfer</option>
+                <option value="saving">Saving</option>
               </select>
             </div>
             
@@ -525,8 +531,8 @@ export default function TransactionsPage() {
             </div>
           </div>
         
-          {/* Transactions Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Transactions Table - Desktop View */}
+          <div className="bg-white rounded-lg shadow overflow-hidden hidden md:block">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -576,7 +582,13 @@ export default function TransactionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                      <span className={transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                      <span className={
+                        transaction.type === 'income' 
+                          ? 'text-green-600' 
+                          : transaction.type === 'saving' 
+                            ? 'text-blue-600' 
+                            : 'text-red-600'
+                      }>
                         {formatAmount(transaction.amount, transaction.type)}
                       </span>
                     </td>
@@ -606,133 +618,189 @@ export default function TransactionsPage() {
                 ))}
               </tbody>
             </table>
-            
-            {/* Pagination */}
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Previous
-                </button>
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Next
-                </button>
+          </div>
+
+          {/* Transactions Cards - Mobile View */}
+          <div className="md:hidden space-y-4">
+            {getCurrentPageItems().map(transaction => (
+              <div key={transaction.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-500">{formatDate(transaction.date)}</span>
+                  <span className={
+                    transaction.type === 'income' 
+                      ? 'text-green-600 font-medium' 
+                      : transaction.type === 'saving' 
+                        ? 'text-blue-600 font-medium' 
+                        : 'text-red-600 font-medium'
+                  }>
+                    {formatAmount(transaction.amount, transaction.type)}
+                  </span>
+                </div>
+                
+                <div className="font-medium mb-1">{transaction.description}</div>
+                
+                <div className="flex items-center text-sm text-gray-700 mb-3">
+                  <span className="mr-2 text-lg">
+                    {getCategoryIcon(transaction.category)}
+                  </span>
+                  <span>{transaction.category}</span>
+                </div>
+                
+                {transaction.aiReviewNeeded && (
+                  <div className="mb-3">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      AI Review Needed
+                    </span>
+                  </div>
+                )}
+                
+                <div className="flex justify-end space-x-3 mt-2 border-t pt-2">
+                  <button 
+                    onClick={() => handleEditTransaction(transaction)}
+                    className="text-gray-500 hover:text-gray-700 p-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteTransaction(transaction.id)}
+                    className="text-gray-500 hover:text-red-600 p-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * itemsPerPage, filteredTransactions.length)}
-                    </span>{' '}
-                    of <span className="font-medium">{filteredTransactions.length}</span> transactions
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
+            ))}
+          </div>
+            
+          {/* Pagination */}
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg shadow">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                  currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                  currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                  <span className="font-medium">
+                    {Math.min(currentPage * itemsPerPage, filteredTransactions.length)}
+                  </span>{' '}
+                  of <span className="font-medium">{filteredTransactions.length}</span> transactions
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                      currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Always show first page, last page, current page, and pages around current page
+                    let pageToShow: number | null = null;
                     
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      // Always show first page, last page, current page, and pages around current page
-                      let pageToShow: number | null = null;
-                      
-                      if (totalPages <= 5) {
-                        // If 5 or fewer pages, show all
+                    if (totalPages <= 5) {
+                      // If 5 or fewer pages, show all
+                      pageToShow = i + 1;
+                    } else if (currentPage <= 3) {
+                      // Near the start
+                      if (i < 4) {
                         pageToShow = i + 1;
-                      } else if (currentPage <= 3) {
-                        // Near the start
-                        if (i < 4) {
-                          pageToShow = i + 1;
-                        } else {
-                          pageToShow = totalPages;
-                        }
-                      } else if (currentPage >= totalPages - 2) {
-                        // Near the end
-                        if (i === 0) {
-                          pageToShow = 1;
-                        } else {
-                          pageToShow = totalPages - 4 + i;
-                        }
                       } else {
-                        // In the middle
-                        if (i === 0) {
-                          pageToShow = 1;
-                        } else if (i === 4) {
-                          pageToShow = totalPages;
-                        } else {
-                          pageToShow = currentPage - 1 + (i - 1);
-                        }
+                        pageToShow = totalPages;
                       }
-                      
-                      // Show ellipsis instead of some page numbers
-                      if (totalPages > 5) {
-                        if (
-                          (i === 1 && pageToShow !== 2) ||
-                          (i === 3 && pageToShow !== totalPages - 1)
-                        ) {
-                          return (
-                            <span
-                              key={`ellipsis-${i}`}
-                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
-                            >
-                              ...
-                            </span>
-                          );
-                        }
+                    } else if (currentPage >= totalPages - 2) {
+                      // Near the end
+                      if (i === 0) {
+                        pageToShow = 1;
+                      } else {
+                        pageToShow = totalPages - 4 + i;
                       }
-                      
-                      return (
-                        <button
-                          key={pageToShow}
-                          onClick={() => handlePageChange(pageToShow!)}
-                          className={`relative inline-flex items-center px-4 py-2 border ${
-                            currentPage === pageToShow
-                              ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          } text-sm font-medium`}
-                        >
-                          {pageToShow}
-                        </button>
-                      );
-                    })}
+                    } else {
+                      // In the middle
+                      if (i === 0) {
+                        pageToShow = 1;
+                      } else if (i === 4) {
+                        pageToShow = totalPages;
+                      } else {
+                        pageToShow = currentPage - 1 + (i - 1);
+                      }
+                    }
                     
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === totalPages ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </nav>
-                </div>
+                    // Show ellipsis instead of some page numbers
+                    if (totalPages > 5) {
+                      if (
+                        (i === 1 && pageToShow !== 2) ||
+                        (i === 3 && pageToShow !== totalPages - 1)
+                      ) {
+                        return (
+                          <span
+                            key={`ellipsis-${i}`}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                    }
+                    
+                    return (
+                      <button
+                        key={pageToShow}
+                        onClick={() => handlePageChange(pageToShow!)}
+                        className={`relative inline-flex items-center px-4 py-2 border ${
+                          currentPage === pageToShow
+                            ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        } text-sm font-medium`}
+                      >
+                        {pageToShow}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                      currentPage === totalPages ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
               </div>
             </div>
           </div>
