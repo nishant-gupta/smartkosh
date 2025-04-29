@@ -82,7 +82,7 @@ function parseCSV(content: string) {
 
 // Process upload jobs
 uploadQueue.process(async (job: Job) => {
-  const { jobId, fileContent, userId, accountId } = job.data;
+  const { jobId, fileContent, userId, fileName } = job.data;
   console.log(`[Queue] Starting processing for job ${jobId}`);
   
   try {
@@ -92,6 +92,38 @@ uploadQueue.process(async (job: Job) => {
       data: {
         status: 'processing',
         progress: 10
+      }
+    });
+    
+    // Get user and accounts
+    const user = await prisma.user.findUnique({
+      where: { 
+        id: userId.includes('@') ? undefined : userId,
+        email: userId.includes('@') ? userId : undefined
+      },
+      include: { accounts: true }
+    });
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    if (user.accounts.length === 0) {
+      throw new Error('No accounts found for user');
+    }
+    
+    // Use first account
+    const accountId = user.accounts[0].id;
+    
+    // Create notification for job started
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        title: 'CSV Upload Started',
+        message: `Your file "${fileName}" is being processed in the background.`,
+        type: 'info',
+        relatedTo: 'transaction_upload',
+        data: { jobId }
       }
     });
     

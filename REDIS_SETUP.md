@@ -262,4 +262,62 @@ Since Vercel's serverless functions terminate after the HTTP response, the worke
 - [Bull Documentation](https://github.com/OptimalBits/bull/blob/master/REFERENCE.md)
 - [Redis Documentation](https://redis.io/documentation)
 - [Vercel Deployment](https://vercel.com/docs/deployments/environments)
-- [Upstash Documentation](https://docs.upstash.com/) 
+- [Upstash Documentation](https://docs.upstash.com/)
+
+## Vercel Deployment Guidelines
+
+Vercel's serverless functions have important limitations to be aware of:
+
+1. **Execution Timeout**: Functions timeout after:
+   - 10 seconds on the Hobby plan
+   - 60 seconds on the Pro plan
+   - 90 seconds on the Enterprise plan
+
+2. **No Background Processing**: Serverless functions terminate when they send an HTTP response. They cannot run background tasks.
+
+### Optimizing for Vercel
+
+1. **Make your API routes respond quickly**:
+   - Don't wait for background processing to complete
+   - Return a response as soon as possible
+   - Avoid unnecessary database queries in the API route
+
+2. **Minimal Job Creation**:
+   - Create job records with minimal information
+   - Let the worker process handle the heavy lifting
+   - Use `await` only for critical operations before responding
+
+### Validating Your Setup on Vercel
+
+1. **Use the status endpoint**:
+   - Visit `/api/background-jobs/status` to check:
+     - If Redis connection is working
+     - Number of waiting/active/completed jobs
+     - Recent job history from the database
+
+2. **Check Vercel Logs**:
+   - Go to your Vercel project dashboard
+   - Navigate to "Deployments" → Select deployment → "Functions"
+   - Look for your API route logs to debug issues
+
+3. **Common Issues and Solutions**:
+
+   - **504 Gateway Timeout**:
+     - API route is taking too long to respond
+     - Reduce operations before sending response
+     - Move heavy processing to the worker
+
+   - **Redis Connection Errors**:
+     - Check your Redis URL in environment variables
+     - Verify Redis provider is accessible from Vercel
+     - For Upstash, ensure proper region is selected
+
+   - **Worker Not Processing Jobs**:
+     - Verify worker is running (on Railway, etc.)
+     - Check Redis is accessible from both Vercel and worker host
+     - Look at worker logs for errors
+
+4. **Monitoring Production**:
+   - Set up proper logging for your worker
+   - Use Redis dashboard from your provider
+   - Create admin endpoints that check job status 
