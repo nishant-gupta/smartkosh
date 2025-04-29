@@ -3,68 +3,6 @@ import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/prisma'
 import uploadQueue from '@/lib/queue'
 
-// Function to parse the CSV file content
-function parseCSV(content: string) {
-  try {
-    // Parse CSV content
-    const records = parse(content, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true
-    })
-    
-    // Get current year for validation
-    const currentYear = new Date().getFullYear()
-    
-    // Validate and transform records
-    return records.map((record: any) => {
-      // Check for required fields
-      if (!record.Date || !record.Description) {
-        throw new Error('CSV must contain Date and Description columns')
-      }
-      
-      // Parse and validate date
-      let parsedDate = new Date(record.Date)
-      
-      // If date is invalid or year is too far in the past, default to today's date
-      if (isNaN(parsedDate.getTime()) || parsedDate.getFullYear() < (currentYear - 3)) {
-        console.log(`Invalid or old date ${record.Date}, defaulting to today for record:`, record)
-        parsedDate = new Date()
-      }
-      
-      // Determine transaction type and amount
-      let amount = 0
-      let type = 'expense'
-      
-      // Check if "Withdrawal Amount" exists and has a value
-      if (record['Withdrawal Amount'] && parseFloat(record['Withdrawal Amount']) > 0) {
-        amount = parseFloat(record['Withdrawal Amount'])
-        type = 'expense'
-      } 
-      // Check if "Deposit Amount" exists and has a value
-      else if (record['Deposit Amount'] && parseFloat(record['Deposit Amount']) > 0) {
-        amount = parseFloat(record['Deposit Amount'])
-        type = 'income'
-      } else {
-        throw new Error('Each row must have either Withdrawal Amount or Deposit Amount')
-      }
-      
-      // Map CSV record to transaction model
-      return {
-        date: parsedDate,
-        description: record.Description,
-        category: record.Category || 'Uncategorized',
-        amount,
-        type,
-        notes: record.Notes || null
-      }
-    })
-  } catch (error: any) {
-    console.error('CSV parsing error details:', error)
-    throw new Error(`CSV parsing error: ${error.message}`)
-  }
-}
-
 export async function POST(req: Request) {
   try {
     const session = await getServerSession()

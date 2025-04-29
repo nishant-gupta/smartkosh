@@ -1,4 +1,4 @@
-import uploadQueue from '@/lib/queue';
+import uploadQueue from '../lib/queue';
 
 // This file is meant to be run in a separate process from the web server
 // It will process jobs added to the queue

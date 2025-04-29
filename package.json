@@ -10,7 +10,7 @@
     "postinstall": "prisma generate",
     "worker": "NODE_ENV=production tsx workers/uploadWorker.ts",
     "worker:win": "set NODE_ENV=production&& tsx workers/uploadWorker.ts",
-    "build:worker": "tsc workers/uploadWorker.ts --outDir dist",
+    "build:worker": "tsc --project tsconfig.worker.json",
     "start:worker": "NODE_ENV=production node dist/workers/uploadWorker.js"
   },
   "dependencies": {
