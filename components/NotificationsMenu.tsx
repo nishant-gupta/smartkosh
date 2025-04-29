@@ -8,7 +8,7 @@ interface Notification {
   title: string
   message: string
   type: string
-  isRead: boolean
+  read: boolean
   createdAt: string
   relatedTo?: string
   data?: any
@@ -56,7 +56,7 @@ export default function NotificationsMenu() {
       if (response.ok) {
         // Update local state
         setNotifications(prev => 
-          prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+          prev.map(n => n.id === id ? { ...n, read: true } : n)
         )
         setUnreadCount(prev => prev - 1)
       }
@@ -73,13 +73,13 @@ export default function NotificationsMenu() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ markAllRead: true })
+        body: JSON.stringify({ markAll: true })
       })
       
       if (response.ok) {
         // Update local state
         setNotifications(prev => 
-          prev.map(n => ({ ...n, isRead: true }))
+          prev.map(n => ({ ...n, read: true }))
         )
         setUnreadCount(0)
       }
@@ -91,7 +91,7 @@ export default function NotificationsMenu() {
   // Handle click on a notification
   const handleNotificationClick = (notification: Notification) => {
     // Mark as read
-    if (!notification.isRead) {
+    if (!notification.read) {
       markAsRead(notification.id)
     }
     
@@ -189,7 +189,7 @@ export default function NotificationsMenu() {
                 <div 
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                  className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''}`}
                 >
                   <div className="flex items-start">
                     {/* Icon based on notification type */}
