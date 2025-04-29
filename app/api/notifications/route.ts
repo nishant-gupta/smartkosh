@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const notificationId = url.searchParams.get('id');
     const unreadOnly = url.searchParams.get('unread') === 'true';
+    const includeRead = url.searchParams.get('includeRead') === 'true';
     
     // If notification ID is provided, return that specific notification
     if (notificationId) {
@@ -85,16 +86,46 @@ export async function GET(request: NextRequest) {
     const limit = Number(url.searchParams.get('limit') || '20');
     const offset = Number(url.searchParams.get('offset') || '0');
     
-    // Build the query based on filter criteria
-    let notificationsQuery = `
-      SELECT 
-        id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
-      FROM "Notification"
-      WHERE "userId" = '${userId}'
-      ${unreadOnly ? "AND read = false" : ""}
-      ORDER BY "createdAt" DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+    // Get total count for pagination
+    let totalCountQuery: any;
+    if (unreadOnly) {
+      totalCountQuery = prisma.$queryRaw`
+        SELECT COUNT(*) as count
+        FROM "Notification"
+        WHERE "userId" = ${userId} AND read = false
+      `;
+    } else {
+      totalCountQuery = prisma.$queryRaw`
+        SELECT COUNT(*) as count
+        FROM "Notification"
+        WHERE "userId" = ${userId}
+      `;
+    }
+    
+    const totalCountResult = await totalCountQuery;
+    const totalCount = Number((totalCountResult as any[])[0]?.count || 0);
+    
+    // Get notifications with proper pagination
+    let notifications: any;
+    if (unreadOnly) {
+      notifications = await prisma.$queryRaw`
+        SELECT 
+          id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
+        FROM "Notification"
+        WHERE "userId" = ${userId} AND read = false
+        ORDER BY "createdAt" DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    } else {
+      notifications = await prisma.$queryRaw`
+        SELECT 
+          id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
+        FROM "Notification"
+        WHERE "userId" = ${userId}
+        ORDER BY "createdAt" DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+    }
     
     // Count unread notifications
     const unreadCountResult = await prisma.$queryRaw`
@@ -105,12 +136,10 @@ export async function GET(request: NextRequest) {
     
     const unreadCount = Number((unreadCountResult as any[])[0]?.count || 0);
     
-    // Get notifications
-    const notifications = await prisma.$queryRawUnsafe(notificationsQuery);
-    
     return NextResponse.json({
       notifications,
-      unreadCount
+      unreadCount,
+      totalCount
     });
   } catch (error) {
     console.error('Error fetching notifications:', error);

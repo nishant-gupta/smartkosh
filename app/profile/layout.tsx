@@ -52,6 +52,12 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
           <NavItem href="/profile/basic" isActive={pathname === '/profile' || pathname === '/profile/basic'}>Basic Info</NavItem>
           <NavItem href="/profile/financial">Financial Info</NavItem>
           <NavItem href="/profile/accounts">Linked Accounts</NavItem>
+          <NavItem href="/profile/notifications" isActive={pathname?.startsWith('/profile/notifications')}>
+            <div className="flex items-center justify-between w-full">
+              <span>Notifications</span>
+              {/* Add notification indicator badge if needed */}
+            </div>
+          </NavItem>
         </nav>
         
         <div className="mt-auto pt-4 border-t border-gray-700">
