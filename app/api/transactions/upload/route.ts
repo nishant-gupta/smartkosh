@@ -175,7 +175,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         'CSV_UPLOAD',
         'pending',
         0,
-        ${JSON.stringify({ fileName: file.name })},
+        ${JSON.stringify({ fileName: file.name })}::jsonb,
         NOW(),
         NOW()
       )
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 totalProcessed: transactions.length,
                 successCount,
                 failureCount
-              })}
+              })}::jsonb
           WHERE id = ${jobId}
         `;
         

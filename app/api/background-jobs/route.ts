@@ -179,7 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ${type},
         'pending',
         0,
-        ${result ? JSON.stringify(result) : null},
+        ${result ? JSON.stringify(result) : null}::jsonb,
         NOW(),
         NOW()
       )
