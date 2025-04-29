@@ -1,11 +1,20 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/lib/auth-options'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+// Define the schema for creating a background job
+const CreateJobSchema = z.object({
+  type: z.string(),
+  data: z.record(z.any()).optional()
+})
 
 // Get background jobs for the current user
-export async function GET(req: Request) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await getServerSession()
+    // Check if user is authenticated
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json(
@@ -14,91 +23,96 @@ export async function GET(req: Request) {
       )
     }
     
-    // Get user ID from session or look it up by email
-    const userId = (session.user as any).id;
+    // Get user's email
     const userEmail = session.user.email;
     
-    if (!userId && !userEmail) {
+    if (!userEmail) {
       return NextResponse.json(
-        { error: 'User not properly authenticated' },
-        { status: 401 }
-      )
+        { error: 'User email not found' },
+        { status: 400 }
+      );
     }
     
-    // If we don't have ID but have email, look up the user
-    let actualUserId;
-    if (!userId && userEmail) {
-      const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      actualUserId = user.id;
-    } else {
-      actualUserId = userId;
+    // Get user ID
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
     
-    // Get the job ID from the query string if present
-    const { searchParams } = new URL(req.url);
-    const jobId = searchParams.get('id');
+    const userId = user.id;
     
+    // Get query parameters
+    const url = new URL(request.url);
+    const jobId = url.searchParams.get('jobId');
+    
+    // If job ID is provided, return that specific job
     if (jobId) {
-      // Get a specific job
-      const job = await prisma.backgroundJob.findUnique({
-        where: { 
-          id: jobId,
-        }
-      });
+      // Use raw SQL to get job details
+      const jobs = await prisma.$queryRaw`
+        SELECT 
+          id, 
+          type, 
+          status, 
+          progress, 
+          data, 
+          result,
+          error,
+          "createdAt", 
+          "updatedAt"
+        FROM "BackgroundJob"
+        WHERE id = ${jobId} AND "userId" = ${userId}
+      `;
       
-      if (!job) {
+      const jobsArray = jobs as any[];
+      if (!jobsArray.length) {
         return NextResponse.json(
           { error: 'Job not found' },
           { status: 404 }
         );
       }
       
-      // Ensure the job belongs to the current user
-      if (job.userId !== actualUserId) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      return NextResponse.json(job);
-    } else {
-      // Get all jobs for the user, ordered by creation date descending
-      const jobs = await prisma.backgroundJob.findMany({
-        where: { 
-          userId: actualUserId 
-        },
-        orderBy: { 
-          createdAt: 'desc' 
-        }
-      });
-      
-      return NextResponse.json(jobs);
+      return NextResponse.json(jobsArray[0]);
     }
-  } catch (error: any) {
+    
+    // Otherwise, return all jobs for this user
+    const jobs = await prisma.$queryRaw`
+      SELECT 
+        id, 
+        type, 
+        status, 
+        progress, 
+        data, 
+        result, 
+        error,
+        "createdAt", 
+        "updatedAt"
+      FROM "BackgroundJob"
+      WHERE "userId" = ${userId}
+      ORDER BY "createdAt" DESC
+    `;
+    
+    return NextResponse.json(jobs);
+  } catch (error) {
     console.error('Error fetching background jobs:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch background jobs' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
 // Create a new background job
-export async function POST(req: Request) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await getServerSession()
+    // Check if user is authenticated
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json(
@@ -107,63 +121,81 @@ export async function POST(req: Request) {
       )
     }
     
-    // Get user ID from session or look it up by email
-    const userId = (session.user as any).id;
+    // Get user's email
     const userEmail = session.user.email;
     
-    if (!userId && !userEmail) {
+    if (!userEmail) {
       return NextResponse.json(
-        { error: 'User not properly authenticated' },
-        { status: 401 }
-      )
-    }
-    
-    // If we don't have ID but have email, look up the user
-    let actualUserId;
-    if (!userId && userEmail) {
-      const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      actualUserId = user.id;
-    } else {
-      actualUserId = userId;
-    }
-    
-    // Parse request body
-    const body = await req.json();
-    const { type } = body;
-    
-    if (!type) {
-      return NextResponse.json(
-        { error: 'Job type is required' },
+        { error: 'User email not found' },
         { status: 400 }
       );
     }
     
-    // Create a new background job
-    const job = await prisma.backgroundJob.create({
-      data: {
-        userId: actualUserId,
-        type,
-        status: 'pending',
-        progress: 0
-      }
+    // Get user ID
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { id: true }
     });
     
-    return NextResponse.json(job);
-  } catch (error: any) {
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    const userId = user.id;
+    
+    // Parse request body
+    const body = await request.json();
+    
+    // Validate request body
+    const validationResult = CreateJobSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: validationResult.error.format() },
+        { status: 400 }
+      );
+    }
+    
+    const { type, data } = validationResult.data;
+    
+    // Generate job ID
+    const jobId = `job_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+    
+    // Insert job record using raw SQL
+    await prisma.$executeRaw`
+      INSERT INTO "BackgroundJob" (
+        id,
+        "userId",
+        type,
+        status,
+        progress,
+        data,
+        "createdAt",
+        "updatedAt"
+      )
+      VALUES (
+        ${jobId},
+        ${userId},
+        ${type},
+        'pending',
+        0,
+        ${data ? JSON.stringify(data) : null},
+        NOW(),
+        NOW()
+      )
+    `;
+    
+    // Return job ID
+    return NextResponse.json({
+      message: 'Background job created',
+      jobId: jobId
+    });
+  } catch (error) {
     console.error('Error creating background job:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create background job' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

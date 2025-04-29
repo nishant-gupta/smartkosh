@@ -1,11 +1,29 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/lib/auth-options'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+// Schema for creating notifications
+const CreateNotificationSchema = z.object({
+  userId: z.string().optional(),
+  title: z.string(),
+  message: z.string(),
+  type: z.string(),
+  relatedTo: z.string().optional()
+})
+
+// Schema for updating notification read status
+const UpdateNotificationSchema = z.object({
+  id: z.string().optional(),
+  markAll: z.boolean().optional()
+})
 
 // Get notifications for the current user
-export async function GET(req: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    // Check if user is authenticated
+    const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json(
@@ -14,255 +32,290 @@ export async function GET(req: Request) {
       )
     }
     
-    // Get user ID from session or look it up by email
-    const userId = (session.user as any).id;
     const userEmail = session.user.email;
     
-    if (!userId && !userEmail) {
+    if (!userEmail) {
       return NextResponse.json(
-        { error: 'User not properly authenticated' },
-        { status: 401 }
-      )
+        { error: 'User email not found' },
+        { status: 400 }
+      );
     }
     
-    // If we don't have ID but have email, look up the user
-    let actualUserId;
-    if (!userId && userEmail) {
-      const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      actualUserId = user.id;
-    } else {
-      actualUserId = userId;
+    // Get user ID
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
     
-    // Get the notification ID from the query string if present
-    const { searchParams } = new URL(req.url);
-    const notificationId = searchParams.get('id');
-    const unreadOnly = searchParams.get('unread') === 'true';
+    const userId = user.id;
     
-    // Define the where clause based on parameters
-    const whereClause: any = { userId: actualUserId };
-    if (unreadOnly) {
-      whereClause.isRead = false;
-    }
+    // Get query parameters
+    const url = new URL(request.url);
+    const notificationId = url.searchParams.get('id');
+    const unreadOnly = url.searchParams.get('unread') === 'true';
     
+    // If notification ID is provided, return that specific notification
     if (notificationId) {
-      // Get a specific notification
-      const notification = await prisma.notification.findUnique({
-        where: { 
-          id: notificationId
-        }
-      });
+      const notifications = await prisma.$queryRaw`
+        SELECT 
+          id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
+        FROM "Notification"
+        WHERE id = ${notificationId} AND "userId" = ${userId}
+        LIMIT 1
+      `;
       
-      if (!notification) {
+      if (!notifications || (notifications as any[]).length === 0) {
         return NextResponse.json(
-          { error: 'Notification not found' },
+          { error: 'Notification not found or does not belong to you' },
           { status: 404 }
         );
       }
       
-      // Ensure the notification belongs to the current user
-      if (notification.userId !== actualUserId) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      return NextResponse.json(notification);
-    } else {
-      // Get all notifications for the user, ordered by creation date descending
-      const notifications = await prisma.notification.findMany({
-        where: whereClause,
-        orderBy: { 
-          createdAt: 'desc' 
-        }
-      });
-      
-      // Get unread count
-      const unreadCount = await prisma.notification.count({
-        where: {
-          userId: actualUserId,
-          isRead: false
-        }
-      });
-      
-      return NextResponse.json({
-        notifications,
-        unreadCount
-      });
+      return NextResponse.json((notifications as any[])[0]);
     }
-  } catch (error: any) {
+    
+    // Otherwise, return all notifications for this user with pagination
+    const limit = Number(url.searchParams.get('limit') || '20');
+    const offset = Number(url.searchParams.get('offset') || '0');
+    
+    // Build the query based on filter criteria
+    let notificationsQuery = `
+      SELECT 
+        id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
+      FROM "Notification"
+      WHERE "userId" = '${userId}'
+      ${unreadOnly ? "AND read = false" : ""}
+      ORDER BY "createdAt" DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    
+    // Count unread notifications
+    const unreadCountResult = await prisma.$queryRaw`
+      SELECT COUNT(*) as count
+      FROM "Notification"
+      WHERE "userId" = ${userId} AND read = false
+    `;
+    
+    const unreadCount = Number((unreadCountResult as any[])[0]?.count || 0);
+    
+    // Get notifications
+    const notifications = await prisma.$queryRawUnsafe(notificationsQuery);
+    
+    return NextResponse.json({
+      notifications,
+      unreadCount
+    });
+  } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch notifications' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
 // Create a new notification
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    
-    // Admin check can be added here if you want to restrict notification creation
+    // Check if user is authenticated for certain operations
+    const session = await getServerSession(authOptions);
     
     // Parse request body
-    const body = await req.json();
-    const { userId, title, message, type, relatedTo, data } = body;
+    const requestBody = await request.json();
+    const validationResult = CreateNotificationSchema.safeParse(requestBody);
     
-    if (!userId || !title || !message || !type) {
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'UserId, title, message, and type are required' },
+        { error: 'Invalid request body', details: validationResult.error },
         { status: 400 }
       );
     }
     
-    // Create a new notification
-    const notification = await prisma.notification.create({
-      data: {
-        userId,
-        title,
-        message,
-        type,
-        relatedTo,
-        data: data || undefined,
-        isRead: false
-      }
-    });
+    const { userId, title, message, type, relatedTo } = validationResult.data;
     
-    return NextResponse.json(notification);
-  } catch (error: any) {
-    console.error('Error creating notification:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to create notification' },
-      { status: 500 }
-    );
-  }
-}
-
-// Mark notifications as read
-export async function PATCH(req: Request) {
-  try {
-    const session = await getServerSession()
+    // If creating a notification for another user, require auth
+    let targetUserId = userId;
     
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    
-    // Get user ID from session or look it up by email
-    const userId = (session.user as any).id;
-    const userEmail = session.user.email;
-    
-    if (!userId && !userEmail) {
-      return NextResponse.json(
-        { error: 'User not properly authenticated' },
-        { status: 401 }
-      )
-    }
-    
-    // If we don't have ID but have email, look up the user
-    let actualUserId;
-    if (!userId && userEmail) {
-      const user = await prisma.user.findUnique({
-        where: { email: userEmail },
-        select: { id: true }
-      });
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      actualUserId = user.id;
-    } else {
-      actualUserId = userId;
-    }
-    
-    // Parse request body
-    const body = await req.json();
-    const { id, markAllRead } = body;
-    
-    if (markAllRead) {
-      // Mark all notifications as read
-      await prisma.notification.updateMany({
-        where: {
-          userId: actualUserId,
-          isRead: false
-        },
-        data: {
-          isRead: true
-        }
-      });
-      
-      return NextResponse.json({
-        success: true,
-        message: 'All notifications marked as read'
-      });
-    } else if (id) {
-      // Mark a specific notification as read
-      const notification = await prisma.notification.findUnique({
-        where: { id }
-      });
-      
-      if (!notification) {
-        return NextResponse.json(
-          { error: 'Notification not found' },
-          { status: 404 }
-        );
-      }
-      
-      // Ensure the notification belongs to the current user
-      if (notification.userId !== actualUserId) {
+    if (!targetUserId) {
+      if (!session?.user?.email) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
         );
       }
       
-      // Update the notification
-      await prisma.notification.update({
-        where: { id },
-        data: { isRead: true }
+      const currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true }
       });
       
-      return NextResponse.json({
-        success: true,
-        message: 'Notification marked as read'
-      });
-    } else {
+      if (!currentUser) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      
+      targetUserId = currentUser.id;
+    }
+    
+    // Generate a unique ID for the notification
+    const notificationId = `notif_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+    
+    // Create notification using raw SQL
+    await prisma.$executeRaw`
+      INSERT INTO "Notification" (
+        id,
+        "userId",
+        title,
+        message,
+        type,
+        "relatedTo",
+        read,
+        "createdAt",
+        "updatedAt"
+      )
+      VALUES (
+        ${notificationId},
+        ${targetUserId},
+        ${title},
+        ${message},
+        ${type},
+        ${relatedTo || null},
+        false,
+        NOW(),
+        NOW()
+      )
+    `;
+    
+    // Get the created notification
+    const notifications = await prisma.$queryRaw`
+      SELECT 
+        id, "userId", title, message, type, "relatedTo", read, "createdAt", "updatedAt"
+      FROM "Notification"
+      WHERE id = ${notificationId}
+      LIMIT 1
+    `;
+    
+    if (!notifications || (notifications as any[]).length === 0) {
       return NextResponse.json(
-        { error: 'Either id or markAllRead is required' },
+        { error: 'Failed to create notification' },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json({
+      message: 'Notification created',
+      notification: (notifications as any[])[0]
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// Mark notifications as read
+export async function PATCH(request: NextRequest) {
+  try {
+    // Check if user is authenticated
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    const userEmail = session.user.email;
+    
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'User email not found' },
         { status: 400 }
       );
     }
-  } catch (error: any) {
-    console.error('Error updating notifications:', error);
+    
+    // Get user ID
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { id: true }
+    });
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    const userId = user.id;
+    
+    // Parse request body
+    const requestBody = await request.json();
+    const validationResult = UpdateNotificationSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: validationResult.error },
+        { status: 400 }
+      );
+    }
+    
+    const { id, markAll } = validationResult.data;
+    
+    // If markAll is true, mark all notifications as read
+    if (markAll) {
+      await prisma.$executeRaw`
+        UPDATE "Notification"
+        SET read = true, "updatedAt" = NOW()
+        WHERE "userId" = ${userId} AND read = false
+      `;
+      
+      return NextResponse.json({
+        message: 'All notifications marked as read'
+      });
+    }
+    
+    // Otherwise mark a specific notification as read
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Notification ID is required when not marking all as read' },
+        { status: 400 }
+      );
+    }
+    
+    // Update notification using raw SQL
+    const result = await prisma.$executeRaw`
+      UPDATE "Notification"
+      SET read = true, "updatedAt" = NOW()
+      WHERE id = ${id} AND "userId" = ${userId}
+    `;
+    
+    if (result === 0) {
+      return NextResponse.json(
+        { error: 'Notification not found or already read' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error updating notification:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update notifications' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
