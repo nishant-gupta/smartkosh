@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/prisma'
-import { parse } from 'csv-parse/sync'
+import uploadQueue from '@/lib/queue'
 
 // Function to parse the CSV file content
 function parseCSV(content: string) {
@@ -175,11 +175,6 @@ export async function POST(req: Request) {
       const fileContent = await file.text()
       const fileName = file.name
       
-      // Validate by parsing a sample (just to check format is correct)
-      console.log('Validating CSV format')
-      const sampleLines = fileContent.split('\n').slice(0, 5).join('\n')
-      parseCSV(sampleLines)
-      
       // Create a background job for processing
       const job = await prisma.backgroundJob.create({
         data: {
@@ -195,12 +190,6 @@ export async function POST(req: Request) {
         }
       })
       
-      // Start background processing (normally this would be done by a worker)
-      // For demonstration, we'll use setTimeout to simulate a background process
-      setTimeout(() => {
-        processUploadJob(job.id, fileContent, actualUserId, defaultAccountId);
-      }, 100);
-      
       // Create initial notification
       await prisma.notification.create({
         data: {
@@ -212,6 +201,20 @@ export async function POST(req: Request) {
           data: { jobId: job.id }
         }
       });
+      
+      // Add job to Bull queue instead of using setTimeout
+      await uploadQueue.add({
+        jobId: job.id,
+        fileContent,
+        userId: actualUserId,
+        accountId: defaultAccountId
+      }, {
+        // Job options can be specified here as well
+        attempts: 3,
+        removeOnComplete: true
+      });
+      
+      console.log(`Job ${job.id} added to queue for processing`);
       
       // Return the job ID to the client
       return NextResponse.json({
@@ -233,247 +236,5 @@ export async function POST(req: Request) {
       { error: error.message || 'Failed to import transactions' },
       { status: 500 }
     )
-  }
-}
-
-// Background processing function
-async function processUploadJob(jobId: string, fileContent: string, userId: string, accountId: string) {
-  console.log(`Starting background job ${jobId} for user ${userId} and account ${accountId}`);
-  
-  try {
-    // Update job status to processing
-    await prisma.backgroundJob.update({
-      where: { id: jobId },
-      data: {
-        status: 'processing',
-        progress: 10
-      }
-    });
-    
-    // Parse the CSV data
-    console.log('Parsing CSV data');
-    const transactions = parseCSV(fileContent);
-    console.log('Successfully parsed', transactions.length, 'transactions');
-    
-    // Update job progress
-    await prisma.backgroundJob.update({
-      where: { id: jobId },
-      data: {
-        progress: 20
-      }
-    });
-    
-    // Process transactions in smaller batches to prevent timeout issues
-    const BATCH_SIZE = 50;
-    const batches = [];
-    
-    for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-      batches.push(transactions.slice(i, i + BATCH_SIZE));
-    }
-    
-    console.log(`Split ${transactions.length} transactions into ${batches.length} batches of max ${BATCH_SIZE}`);
-    
-    let totalCreated = 0;
-    let newBalance = 0;
-    
-    // Get current account balance first (outside transaction)
-    console.log('Fetching current account balance for account:', accountId);
-    const currentAccount = await prisma.account.findUnique({
-      where: { id: accountId }
-    });
-    
-    if (!currentAccount) {
-      throw new Error('Account not found');
-    }
-    
-    newBalance = currentAccount.balance;
-    console.log('Starting balance:', newBalance);
-    
-    // Update job progress
-    await prisma.backgroundJob.update({
-      where: { id: jobId },
-      data: {
-        progress: 30
-      }
-    });
-    
-    // Process each batch in a separate transaction
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      console.log(`Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} transactions)`);
-      
-      try {
-        // Use transaction with timeout option
-        const result = await prisma.$transaction(async (tx) => {
-          const createdTransactions = [];
-          
-          // Create transactions in this batch
-          for (const transaction of batch) {
-            console.log('Creating transaction:', {
-              userId,
-              accountId,
-              description: transaction.description,
-              type: transaction.type
-            });
-            
-            const createdTransaction = await tx.transaction.create({
-              data: {
-                userId,
-                accountId,
-                date: transaction.date,
-                description: transaction.description,
-                category: transaction.category,
-                amount: transaction.amount,
-                type: transaction.type,
-                notes: transaction.notes
-              }
-            });
-            
-            createdTransactions.push(createdTransaction);
-            
-            // Update running balance calculation
-            if (transaction.type === 'income') {
-              newBalance += transaction.amount;
-            } else if (transaction.type === 'expense') {
-              newBalance -= transaction.amount;
-            }
-          }
-          
-          return createdTransactions;
-        }, {
-          timeout: 30000, // 30 second timeout for each batch transaction
-          maxWait: 5000,  // Max 5 seconds waiting for transaction to start
-          isolationLevel: 'ReadCommitted' // Less strict isolation level
-        });
-        
-        totalCreated += result.length;
-        
-        // Update job progress
-        const progressPercentage = 30 + Math.floor(60 * (batchIndex + 1) / batches.length);
-        await prisma.backgroundJob.update({
-          where: { id: jobId },
-          data: {
-            progress: progressPercentage
-          }
-        });
-        
-        console.log(`Batch ${batchIndex + 1} completed. Created ${result.length} transactions.`);
-      } catch (error: any) {
-        console.error(`Error processing batch ${batchIndex + 1}:`, error);
-        
-        // Update job with error
-        await prisma.backgroundJob.update({
-          where: { id: jobId },
-          data: {
-            status: 'failed',
-            error: `Error processing batch ${batchIndex + 1}: ${error.message}`
-          }
-        });
-        
-        // Create notification for the error
-        await prisma.notification.create({
-          data: {
-            userId,
-            title: 'CSV Upload Failed',
-            message: `There was an error processing your upload: ${error.message}`,
-            type: 'error',
-            relatedTo: 'transaction_upload',
-            data: { jobId }
-          }
-        });
-        
-        return; // Exit the function
-      }
-    }
-    
-    // Update account balance in a separate transaction
-    try {
-      console.log('Updating account balance to:', newBalance);
-      await prisma.account.update({
-        where: { id: accountId },
-        data: { balance: newBalance }
-      });
-    } catch (error: any) {
-      console.error('Error updating account balance:', error);
-      
-      // Update job with partial success
-      await prisma.backgroundJob.update({
-        where: { id: jobId },
-        data: {
-          status: 'completed',
-          progress: 95,
-          error: `Transactions were created but account balance could not be updated: ${error.message}`,
-          result: {
-            transactionsCreated: totalCreated,
-            accountUpdateFailed: true
-          }
-        }
-      });
-      
-      // Create notification for partial success
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: 'CSV Upload Partially Completed',
-          message: `Successfully imported ${totalCreated} transactions, but account balance could not be updated.`,
-          type: 'warning',
-          relatedTo: 'transaction_upload',
-          data: { jobId, transactionsCreated: totalCreated }
-        }
-      });
-      
-      return;
-    }
-    
-    // Mark job as completed
-    await prisma.backgroundJob.update({
-      where: { id: jobId },
-      data: {
-        status: 'completed',
-        progress: 100,
-        result: {
-          transactionsCreated: totalCreated,
-          accountBalanceUpdated: true,
-          finalBalance: newBalance
-        }
-      }
-    });
-    
-    // Create success notification
-    await prisma.notification.create({
-      data: {
-        userId,
-        title: 'CSV Upload Completed',
-        message: `Successfully imported ${totalCreated} transactions.`,
-        type: 'success',
-        relatedTo: 'transaction_upload',
-        data: { jobId, transactionsCreated: totalCreated }
-      }
-    });
-    
-    console.log('Upload job completed successfully. Created', totalCreated, 'transactions');
-  } catch (error: any) {
-    console.error('Error in background job:', error);
-    
-    // Update job with error
-    await prisma.backgroundJob.update({
-      where: { id: jobId },
-      data: {
-        status: 'failed',
-        error: error.message
-      }
-    });
-    
-    // Create notification for the error
-    await prisma.notification.create({
-      data: {
-        userId,
-        title: 'CSV Upload Failed',
-        message: `There was an error processing your upload: ${error.message}`,
-        type: 'error',
-        relatedTo: 'transaction_upload',
-        data: { jobId }
-      }
-    });
   }
 } 

@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "worker": "NODE_ENV=production tsx workers/uploadWorker.ts",
+    "worker:win": "set NODE_ENV=production&& tsx workers/uploadWorker.ts",
+    "build:worker": "tsc workers/uploadWorker.ts --outDir dist",
+    "start:worker": "NODE_ENV=production node dist/workers/uploadWorker.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.8.0",
@@ -16,7 +20,9 @@
     "autoprefixer": "^10.4.16",
     "axios": "^1.6.5",
     "bcryptjs": "^2.4.3",
+    "bull": "^4.16.5",
     "csv-parse": "^5.6.0",
+    "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "next": "14.1.0",
     "next-auth": "^4.24.5",
@@ -36,6 +42,7 @@
     "@types/react-dom": "^18.2.18",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.3.3"
   }
 }
