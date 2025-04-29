@@ -113,7 +113,7 @@ export default function UploadStatementPage() {
   return (
     <PageLayout title="Upload Statement">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        {/* <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-semibold">Upload Bank Statement</h1>
           <Link 
             href="/transactions" 
@@ -121,7 +121,7 @@ export default function UploadStatementPage() {
           >
             <span className="mr-1">←</span> Back to Transactions
           </Link>
-        </div>
+        </div> */}
         
         <div className="bg-white rounded-lg shadow-sm p-6">
           {uploadStatus && (
@@ -236,25 +236,24 @@ export default function UploadStatementPage() {
             <ul className="space-y-2">
               <li className="flex items-start">
                 <CheckIcon className="h-5 w-5 text-gray-600 mr-2 mt-0.5" />
-                <span>Required columns: S.No, Date, Notes, Description, Category, Withdrawal Amount, Deposit Amount</span>
+                <span>Required columns: S.No, date, notes, description, category, amount</span>
               </li>
               <li className="flex items-start">
                 <CheckIcon className="h-5 w-5 text-gray-600 mr-2 mt-0.5" />
-                <span>Date format: YYYY-MM-DD</span>
+                <span>Date format: DD/MM/YYYY</span>
               </li>
               <li className="flex items-start">
                 <CheckIcon className="h-5 w-5 text-gray-600 mr-2 mt-0.5" />
-                <span>Amount format: Withdrawal for expenses, Deposit for income</span>
+                <span>Amount format: -ve for expenses, +ve for income</span>
               </li>
             </ul>
             
             <div className="mt-6 p-4 bg-gray-50 rounded-md text-sm">
               <p className="font-medium mb-2">Sample CSV structure:</p>
               <pre className="text-gray-600 overflow-x-auto">
-{`S.No,Date,Notes,Description,Category,Withdrawal Amount,Deposit Amount
-1,2023-04-15,Monthly payment,Salary,Income,,5000.00
-2,2023-04-16,Grocery shopping,Walmart,Groceries,120.50,
-3,2023-04-18,Movie night,AMC Theaters,Entertainment,35.00,`}
+{`S.No,date,notes,description,category,amount
+1,15/04/2025,Monthly payment,Salary,Income,5000.00
+2,16/04/2025,Grocery shopping,Walmart,Groceries,-120.50`}
               </pre>
             </div>
           </div>

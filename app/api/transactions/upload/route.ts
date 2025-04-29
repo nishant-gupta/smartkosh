@@ -35,12 +35,14 @@ async function parseCSV(csvContent: string): Promise<ParsedTransaction[]> {
       .on('data', (data: CSVRow) => {
         // Basic validation
         if (!data.date || !data.description || !data.amount) {
+          console.log('Invalid row:', data);
           return; // Skip invalid rows
         }
         
         // Convert amount to number and handle different formats
         let amount = parseFloat(data.amount.replace(/,/g, '').replace(/[$₹€£¥]/g, ''));
         if (isNaN(amount)) {
+          console.log('Invalid amount:', data.amount);
           return; // Skip if amount is not a valid number
         }
         
@@ -273,12 +275,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 // Try to parse date from various formats
                 const dateParts = transaction.date.split(/[\/\-\.]/);
                 if (dateParts.length === 3) {
-                  // Assume MM/DD/YYYY or DD/MM/YYYY format
-                  // If first part is > 12, assume DD/MM/YYYY
-                  const month = parseInt(dateParts[0]) > 12 ? dateParts[1] : dateParts[0];
-                  const day = parseInt(dateParts[0]) > 12 ? dateParts[0] : dateParts[1];
+                  //use DD/MM/YYYY format
+                  const day = dateParts[0];
+                  const month = dateParts[1];
                   const year = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
                   transactionDate = new Date(`${year}-${month}-${day}`);
+                // } else {
+                //   // Assume MM/DD/YYYY or DD/MM/YYYY format
+                //   // If first part is > 12, assume DD/MM/YYYY
+                //   const month = parseInt(dateParts[0]) > 12 ? dateParts[1] : dateParts[0];
+                //   const day = parseInt(dateParts[0]) > 12 ? dateParts[0] : dateParts[1];
+                //   const year = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
+                //   transactionDate = new Date(`${year}-${month}-${day}`);
                 } else {
                   // Try direct parsing
                   transactionDate = new Date(transaction.date);
@@ -297,22 +305,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               await prisma.$executeRaw`
                 INSERT INTO "Transaction" (
                   id,
+                  "userId",
                   "accountId",
                   date,
                   description,
                   amount,
                   category,
+                  type,
                   notes,
                   "createdAt",
                   "updatedAt"
                 )
                 VALUES (
                   ${transactionId},
+                  ${user.id},
                   ${accountId},
-                  ${transactionDate.toISOString()},
+                  ${transactionDate.toISOString()}::timestamp,
                   ${transaction.description},
                   ${transaction.amount},
                   ${transaction.category || null},
+                  ${transaction.amount > 0 ? 'income' : 'expense'},
                   ${transaction.notes || null},
                   NOW(),
                   NOW()
