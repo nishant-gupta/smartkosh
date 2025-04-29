@@ -7,7 +7,7 @@ import { z } from 'zod'
 // Define the schema for creating a background job
 const CreateJobSchema = z.object({
   type: z.string(),
-  data: z.record(z.any()).optional()
+  result: z.record(z.any()).optional()
 })
 
 // Get background jobs for the current user
@@ -61,7 +61,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           type, 
           status, 
           progress, 
-          data, 
           result,
           error,
           "createdAt", 
@@ -88,7 +87,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         type, 
         status, 
         progress, 
-        data, 
         result, 
         error,
         "createdAt", 
@@ -158,7 +156,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
     
-    const { type, data } = validationResult.data;
+    const { type, result } = validationResult.data;
     
     // Generate job ID
     const jobId = `job_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
@@ -171,7 +169,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         type,
         status,
         progress,
-        data,
+        result,
         "createdAt",
         "updatedAt"
       )
@@ -181,7 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ${type},
         'pending',
         0,
-        ${data ? JSON.stringify(data) : null},
+        ${result ? JSON.stringify(result) : null},
         NOW(),
         NOW()
       )

@@ -165,7 +165,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         type,
         status,
         progress,
-        data,
+        result,
         "createdAt",
         "updatedAt"
       )
