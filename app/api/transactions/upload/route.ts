@@ -190,74 +190,114 @@ export async function POST(req: Request) {
       const transactions = parseCSV(fileContent)
       console.log('Successfully parsed', transactions.length, 'transactions')
       
-      // Save transactions to database in a transaction
-      console.log('Starting database transaction to save', transactions.length, 'transactions')
-      const result = await prisma.$transaction(async (tx) => {
-        const createdTransactions = []
-        
-        for (const transaction of transactions) {
-          console.log('Creating transaction:', {
-            userId: actualUserId,
-            accountId: defaultAccountId,
-            date: transaction.date,
-            description: transaction.description,
-            category: transaction.category,
-            amount: transaction.amount,
-            type: transaction.type
-          })
-          
-          const createdTransaction = await tx.transaction.create({
-            data: {
-              userId: actualUserId,
-              accountId: defaultAccountId,
-              date: transaction.date,
-              description: transaction.description,
-              category: transaction.category,
-              amount: transaction.amount,
-              type: transaction.type,
-              notes: transaction.notes
-            }
-          })
-          
-          createdTransactions.push(createdTransaction)
-        }
-        
-        // Update account balance based on the new transactions
-        console.log('Updating account balance for account:', defaultAccountId)
-        const account = await tx.account.findUnique({
-          where: { id: defaultAccountId }
-        })
-        
-        if (account) {
-          let newBalance = account.balance
-          console.log('Current account balance:', newBalance)
-          
-          for (const transaction of transactions) {
-            if (transaction.type === 'income') {
-              newBalance += transaction.amount
-              console.log(`Added income: ${transaction.amount}, new balance: ${newBalance}`)
-            } else if (transaction.type === 'expense') {
-              newBalance -= transaction.amount
-              console.log(`Subtracted expense: ${transaction.amount}, new balance: ${newBalance}`)
-            }
-          }
-          
-          console.log('Setting final account balance to:', newBalance)
-          await tx.account.update({
-            where: { id: defaultAccountId },
-            data: { balance: newBalance }
-          })
-        }
-        
-        return createdTransactions
-      })
+      // Process transactions in smaller batches to prevent timeout issues
+      const BATCH_SIZE = 50;
+      const batches = [];
       
-      console.log('Upload completed successfully. Created', result.length, 'transactions')
+      for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+        batches.push(transactions.slice(i, i + BATCH_SIZE));
+      }
+      
+      console.log(`Split ${transactions.length} transactions into ${batches.length} batches of max ${BATCH_SIZE}`);
+      
+      let totalCreated = 0;
+      let newBalance = 0;
+      
+      // Get current account balance first (outside transaction)
+      console.log('Fetching current account balance for account:', defaultAccountId);
+      const currentAccount = await prisma.account.findUnique({
+        where: { id: defaultAccountId }
+      });
+      
+      if (!currentAccount) {
+        console.log('Account not found:', defaultAccountId);
+        return NextResponse.json(
+          { error: 'Account not found' },
+          { status: 404 }
+        );
+      }
+      
+      newBalance = currentAccount.balance;
+      console.log('Starting balance:', newBalance);
+      
+      // Process each batch in a separate transaction
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        console.log(`Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} transactions)`);
+        
+        try {
+          // Use transaction with timeout option
+          const result = await prisma.$transaction(async (tx) => {
+            const createdTransactions = [];
+            
+            // Create transactions in this batch
+            for (const transaction of batch) {
+              console.log('Creating transaction:', {
+                userId: actualUserId,
+                accountId: defaultAccountId,
+                description: transaction.description,
+                type: transaction.type
+              });
+              
+              const createdTransaction = await tx.transaction.create({
+                data: {
+                  userId: actualUserId,
+                  accountId: defaultAccountId,
+                  date: transaction.date,
+                  description: transaction.description,
+                  category: transaction.category,
+                  amount: transaction.amount,
+                  type: transaction.type,
+                  notes: transaction.notes
+                }
+              });
+              
+              createdTransactions.push(createdTransaction);
+              
+              // Update running balance calculation
+              if (transaction.type === 'income') {
+                newBalance += transaction.amount;
+              } else if (transaction.type === 'expense') {
+                newBalance -= transaction.amount;
+              }
+            }
+            
+            return createdTransactions;
+          }, {
+            timeout: 30000, // 30 second timeout for each batch transaction
+            maxWait: 5000,  // Max 5 seconds waiting for transaction to start
+            isolationLevel: 'ReadCommitted' // Less strict isolation level
+          });
+          
+          totalCreated += result.length;
+          console.log(`Batch ${batchIndex + 1} completed. Created ${result.length} transactions.`);
+        } catch (error: any) {
+          console.error(`Error processing batch ${batchIndex + 1}:`, error);
+          return NextResponse.json(
+            { error: `Error processing batch ${batchIndex + 1}: ${error.message}` },
+            { status: 500 }
+          );
+        }
+      }
+      
+      // Update account balance in a separate transaction after all batches are processed
+      try {
+        console.log('Updating account balance to:', newBalance);
+        await prisma.account.update({
+          where: { id: defaultAccountId },
+          data: { balance: newBalance }
+        });
+      } catch (error: any) {
+        console.error('Error updating account balance:', error);
+        // Continue anyway since transactions were created successfully
+      }
+      
+      console.log('Upload completed successfully. Created', totalCreated, 'transactions');
       return NextResponse.json({
         success: true,
-        count: result.length,
-        message: `Successfully imported ${result.length} transactions`
-      })
+        count: totalCreated,
+        message: `Successfully imported ${totalCreated} transactions`
+      });
     } catch (error: any) {
       console.error('Error in file processing or transaction creation:', error)
       return NextResponse.json(
