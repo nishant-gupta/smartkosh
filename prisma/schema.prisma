@@ -23,6 +23,7 @@ model User {
   goals         FinancialGoal[]
   profile       Profile?       // Relation to Profile model
   financialProfile FinancialProfile? // Relation to FinancialProfile model
+  notifications Notification[] // Relation to Notification model
 }
 
 model Account {
@@ -105,4 +106,32 @@ model FinancialProfile {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+} 
+
+// Notification model for user notifications
+model Notification {
+  id            String         @id @default(cuid())
+  userId        String
+  title         String
+  message       String
+  type          String         // info, success, warning, error
+  isRead        Boolean        @default(false)
+  relatedTo     String?        // Optional reference to what this notification is about (e.g., "transaction_upload")
+  data          Json?          // Optional JSON data related to the notification
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Background job model to track background tasks like CSV uploads
+model BackgroundJob {
+  id            String         @id @default(cuid())
+  userId        String
+  type          String         // e.g., "transaction_upload"
+  status        String         // pending, processing, completed, failed
+  progress      Int            @default(0)
+  result        Json?          // Result data when job completes
+  error         String?        // Error message if job fails
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 } 

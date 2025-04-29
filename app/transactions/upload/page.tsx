@@ -86,8 +86,8 @@ export default function UploadStatementPage() {
       
       setUploadStatus({
         success: true,
-        message: 'Statement uploaded successfully!',
-        count: data.count
+        message: 'Statement upload started! You will be notified when processing is complete.',
+        count: 0
       })
       
       // Reset file after successful upload
@@ -98,7 +98,7 @@ export default function UploadStatementPage() {
       
       // Redirect to transactions after 2 seconds
       setTimeout(() => {
-        router.push('/transactions?refresh=true')
+        router.push('/transactions')
       }, 2000)
     } catch (error: any) {
       setUploadStatus({
