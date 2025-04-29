@@ -1,20 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: string
-  read: boolean
-  createdAt: string
-  relatedTo?: string
-  data?: any
-}
-
-export default function NotificationsCenter() {
+// Create a client component that uses search params
+function NotificationsContent() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -351,5 +341,39 @@ export default function NotificationsCenter() {
         </div>
       )}
     </div>
+  )
+}
+
+// Loading component for Suspense
+function NotificationsLoading() {
+  return (
+    <div className="max-w-4xl mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900">Notifications</h1>
+      </div>
+      <div className="flex justify-center items-center h-60">
+        <div className="w-10 h-10 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    </div>
+  )
+}
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: string
+  read: boolean
+  createdAt: string
+  relatedTo?: string
+  data?: any
+}
+
+// Main page component with Suspense
+export default function NotificationsCenter() {
+  return (
+    <Suspense fallback={<NotificationsLoading />}>
+      <NotificationsContent />
+    </Suspense>
   )
 } 
