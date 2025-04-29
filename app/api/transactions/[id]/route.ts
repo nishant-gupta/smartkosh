@@ -197,6 +197,9 @@ export async function PUT(
       let oldBalanceChange = existingTransaction.amount;
       if (existingTransaction.type === "expense") {
         oldBalanceChange = -oldBalanceChange;
+      } else if (existingTransaction.type === "saving") {
+        // Consistent with our POST handler, treat savings like expenses
+        oldBalanceChange = -oldBalanceChange;
       }
       
       console.log("Reversing old balance change:", oldBalanceChange);
@@ -237,6 +240,9 @@ export async function PUT(
       // Apply the effect of the new transaction on the account balance
       let newBalanceChange = parseFloat(amount.toString());
       if (type === "expense") {
+        newBalanceChange = -newBalanceChange;
+      } else if (type === "saving") {
+        // Consistent with our POST handler, treat savings like expenses
         newBalanceChange = -newBalanceChange;
       }
       
@@ -340,6 +346,9 @@ export async function DELETE(
       // Reverse the effect of the transaction on the account balance
       let balanceChange = transaction.amount;
       if (transaction.type === "expense") {
+        balanceChange = -balanceChange;
+      } else if (transaction.type === "saving") {
+        // Consistent with our other handlers, treat savings like expenses
         balanceChange = -balanceChange;
       }
       

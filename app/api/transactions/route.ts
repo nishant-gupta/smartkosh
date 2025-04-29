@@ -51,11 +51,14 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const category = searchParams.get("category");
+    const type = searchParams.get("type");
+    const sort = searchParams.get("sort") || "date-desc";
     
     // Use the user ID from the database lookup if needed
     const actualUserId = userId || user?.id;
     
-    // Build the where clause with optional date filtering
+    // Build the where clause with optional filtering
     const where: any = {
       user: {
         id: actualUserId
@@ -78,11 +81,32 @@ export async function GET(req: Request) {
       }
     }
     
+    // Add category filter if provided
+    if (category && category !== 'all') {
+      where.category = category;
+    }
+    
+    // Add type filter if provided
+    if (type && type !== 'all') {
+      where.type = type;
+    }
+    
+    // Define orderBy based on sort parameter
+    let orderBy: any = { date: "desc" };
+    
+    if (sort === 'date-asc') {
+      orderBy = { date: "asc" };
+    } else if (sort === 'amount-desc') {
+      orderBy = { amount: "desc" };
+    } else if (sort === 'amount-asc') {
+      orderBy = { amount: "asc" };
+    } else if (sort === 'category') {
+      orderBy = { category: "asc" };
+    }
+    
     const transactions = await prisma.transaction.findMany({
       where,
-      orderBy: {
-        date: "desc",
-      },
+      orderBy,
       skip,
       take: limit,
       include: {
@@ -224,6 +248,16 @@ export async function POST(req: Request) {
     // Update account balance
     let balanceChange = transaction.amount;
     if (transaction.type === "expense") {
+      balanceChange = -balanceChange;
+    } else if (transaction.type === "saving") {
+      // For savings transactions, we treat them as money moved or set aside
+      // This approach might vary based on your app's financial model
+      // Options:
+      // 1. Treat like expenses (reducing available balance): balanceChange = -balanceChange;
+      // 2. Treat like income (increasing balance): keep as is
+      // 3. No effect on balance (neutral): balanceChange = 0;
+      
+      // Current implementation: treat savings like expenses
       balanceChange = -balanceChange;
     }
     

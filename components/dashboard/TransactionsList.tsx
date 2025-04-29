@@ -120,7 +120,12 @@ export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0
                       ? 'text-blue-600' 
                       : 'text-red-600'
                 }`}>
-                  {transaction.type === 'income' ? '+' : '-'}₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(transaction.amount))}
+                  {transaction.type === 'income' 
+                    ? '+' 
+                    : transaction.type === 'saving'
+                      ? '↗'
+                      : '-'
+                  }₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(transaction.amount))}
                 </span>
                 {onEdit && (
                   <div className="flex justify-end space-x-2">

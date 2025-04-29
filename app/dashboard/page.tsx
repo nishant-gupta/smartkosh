@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import TransactionModal from '@/components/TransactionModal'
 import TransactionsList from '@/components/dashboard/TransactionsList'
+import PageLayout from '@/components/PageLayout'
 
 // We'll use inline SVGs instead of heroicons
 // Icons
@@ -469,106 +470,12 @@ export default function Dashboard() {
   }
   
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-900 bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <div 
-        className={`sidebar fixed lg:sticky lg:top-0 w-64 bg-gray-900 text-white p-4 flex flex-col z-30 h-full lg:h-screen transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-      >
-        <div className="flex items-center space-x-2 mb-8">
-          <span className="bg-white text-gray-900 p-1 rounded-md">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-              <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <span className="font-bold">SmartKosh</span>
-        </div>
-        
-        <div className="mb-8">
-          <div className="text-sm text-gray-400">Free trial</div>
-          <div className="text-sm">9 days left</div>
-        </div>
-        
-        <nav className="flex-1 space-y-1">
-          <NavItem href="/dashboard" icon="dashboard" isActive>Dashboard</NavItem>
-          <NavItem href="/transactions" icon="transactions">Transactions</NavItem>
-          <NavItem href="/analytics" icon="analytics">Analytics</NavItem>
-          <NavItem href="/budget" icon="budget">Budget</NavItem>
-          <NavItem href="/insights" icon="insights">Insights</NavItem>
-        </nav>
-        
-        <div className="mt-auto pt-4 border-t border-gray-700">
-          <NavItem href="/settings" icon="settings">Settings</NavItem>
-          <div className="user-menu">
-            <div 
-              className="flex items-center mt-4 space-x-3 px-3 py-2 rounded-md cursor-pointer hover:bg-gray-800"
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            >
-              <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                {session?.user?.name?.charAt(0) || 'U'}
-              </div>
-              <div className="text-sm flex-1">{session?.user?.name || 'User'}</div>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className={`h-4 w-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}
-                viewBox="0 0 20 20" 
-                fill="currentColor"
-              >
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-            
-            {isUserMenuOpen && (
-              <div className="pl-11 mt-1">
-                <Link 
-                  href="/profile" 
-                  className="flex items-center space-x-2 py-2 px-3 text-sm hover:bg-gray-800 rounded-md"
-                  onClick={() => setIsUserMenuOpen(false)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span>Profile</span>
-                </Link>
-                <button 
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 py-2 px-3 text-sm hover:bg-gray-800 rounded-md w-full text-left"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span>Log out</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1 lg:ml-0 p-4 lg:p-8">
+    <PageLayout title="Dashboard">
+      <div>
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        {/* <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
           <div className="flex justify-between items-center px-4 py-3">
             <div className="flex items-center">
-              <button 
-                className="lg:hidden mr-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
               <h1 className="text-lg md:text-xl font-semibold">Dashboard</h1>
             </div>
             
@@ -594,7 +501,7 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
         
         {/* Financial summary cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6">
@@ -1031,7 +938,7 @@ export default function Dashboard() {
                   </svg>
                 } 
                 title="Upload Statement" 
-                href="#" 
+                href="/transactions/upload" 
               />
               <QuickAction 
                 icon={
@@ -1067,7 +974,7 @@ export default function Dashboard() {
           mode={transactionModalMode}
         />
       )}
-    </div>
+    </PageLayout>
   )
 }
 
@@ -1233,17 +1140,34 @@ function TransactionItem({
 }
 
 function QuickAction({ icon, title, href, onClick }: QuickActionProps & { onClick?: () => void }) {
-  return (
-    <div 
-      className="bg-white rounded-lg shadow p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50"
-      onClick={onClick}
-    >
+  const content = (
+    <>
       <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
         {icon}
       </div>
       <div className="font-medium">{title}</div>
-    </div>
-  )
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <div 
+        className="bg-white rounded-lg shadow p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50"
+        onClick={onClick}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link 
+      href={href}
+      className="bg-white rounded-lg shadow p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50"
+    >
+      {content}
+    </Link>
+  );
 }
 
 // Helper functions for formatting
@@ -1258,7 +1182,14 @@ function formatAmount(amount: number, type: string): string {
     currency: 'INR',
     maximumFractionDigits: 0,
   });
-  return `${type === 'income' ? '+' : '-'}${formatter.format(amount)}`;
+  
+  if (type === 'income') {
+    return `+${formatter.format(amount)}`;
+  } else if (type === 'saving') {
+    return `↗${formatter.format(amount)}`;
+  } else {
+    return `-${formatter.format(amount)}`;
+  }
 }
 
 function getTransactionIcon(category: string): JSX.Element {
