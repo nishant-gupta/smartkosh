@@ -192,7 +192,7 @@ export async function POST(req: Request) {
       
       // Save transactions to database in a transaction
       console.log('Starting database transaction to save', transactions.length, 'transactions')
-      const result = await prisma.$transaction(async (tx: typeof prisma) => {
+      const result = await prisma.$transaction(async (tx) => {
         const createdTransactions = []
         
         for (const transaction of transactions) {

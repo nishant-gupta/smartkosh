@@ -129,7 +129,7 @@ export async function PUT(req: Request) {
     const { yearlyIncome, occupation, incomeSource, taxBracket, savingsGoal, financialGoals } = body;
     
     // Update or create the financial profile using a transaction
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       if (user.financialProfile) {
         // Update existing financial profile
         const updatedFinancialProfile = await tx.financialProfile.update({

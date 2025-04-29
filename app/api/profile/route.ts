@@ -114,7 +114,13 @@ export async function PUT(req: Request) {
     if (!userId && userEmail) {
       user = await prisma.user.findUnique({
         where: { email: userEmail },
-        include: { profile: true }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          password: true,
+          profile: true
+        }
       });
       
       if (!user) {
@@ -126,7 +132,13 @@ export async function PUT(req: Request) {
     } else {
       user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { profile: true }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          password: true,
+          profile: true
+        }
       });
       
       if (!user) {
@@ -177,7 +189,7 @@ export async function PUT(req: Request) {
     }
     
     // Start a transaction to update both User and Profile
-    const result = await prisma.$transaction(async (tx: typeof prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Update the user
       const updatedUser = await tx.user.update({
         where: { id: actualUserId },
