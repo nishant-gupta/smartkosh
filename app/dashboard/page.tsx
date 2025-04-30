@@ -217,8 +217,8 @@ export default function Dashboard() {
       const { startDate, endDate } = getDateRange();
       
       // Fetch transactions for the selected period
-      const response = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}`);
-      
+      const response = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}&limit=10000`);
+
       if (!response.ok) {
         throw new Error('Failed to fetch transactions');
       }
