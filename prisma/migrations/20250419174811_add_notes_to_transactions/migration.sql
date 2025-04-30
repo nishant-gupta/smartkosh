@@ -1,3 +1,0 @@
--- AlterTable
--- This column already exists, so we're skipping this migration
--- ALTER TABLE "Transaction" ADD COLUMN     "notes" TEXT;

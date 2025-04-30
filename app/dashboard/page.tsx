@@ -77,6 +77,39 @@ interface Transaction {
   notes?: string;
 }
 
+// Update the FinancialSummary type to include category
+type FinancialSummary = {
+  id: string;
+  userId: string;
+  year: number;
+  month: number;
+  type: string;
+  amount: number;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// Update the FinancialSummaryState type
+type FinancialSummaryState = {
+  income: {
+    amount: number;
+    trend: number;
+  };
+  expenses: {
+    amount: number;
+    trend: number;
+  };
+  savings: {
+    amount: number;
+    trend: number;
+  };
+  netFlow: {
+    amount: number;
+    trend: number;
+  };
+};
+
 // Define Tailwind color mapping to hex values
 const tailwindToHex: Record<string, string> = {
   "bg-indigo-600": "#4f46e5",
@@ -114,24 +147,15 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [accounts, setAccounts] = useState<any[]>([])
   // New state for financial summary
-  const [financialSummary, setFinancialSummary] = useState({
-    totalIncome: 0,
-    totalExpenses: 0,
-    totalSavings: 0,
-    netFlow: 0,
-    incomeTrend: '+0%',
-    expensesTrend: '+0%',
-    savingsTrend: '+0%',
-    netFlowTrend: '+0%'
+  const [financialSummary, setFinancialSummary] = useState<FinancialSummaryState>({
+    income: { amount: 0, trend: 0 },
+    expenses: { amount: 0, trend: 0 },
+    savings: { amount: 0, trend: 0 },
+    netFlow: { amount: 0, trend: 0 }
   })
   
   // State for category spending
-  const [categorySpending, setCategorySpending] = useState<Array<{
-    category: string;
-    amount: number;
-    percentage: number;
-    color: string;
-  }>>([])
+  const [categorySpending, setCategorySpending] = useState<Record<string, number>>({})
   
   // Additional state for pie chart hover functionality
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -140,12 +164,7 @@ export default function Dashboard() {
   const [activeOverviewTab, setActiveOverviewTab] = useState<'financial' | 'spending' | 'savings'>('financial')
   
   // Add state for savings categories
-  const [savingsByCategory, setSavingsByCategory] = useState<{ 
-    category: string; 
-    amount: number; 
-    percentage: number; 
-    color: string 
-  }[]>([]);
+  const [savingsByCategory, setSavingsByCategory] = useState<Record<string, number>>({})
   
   // Define category colors
   const categoryColors: Record<string, string> = {
@@ -182,227 +201,155 @@ export default function Dashboard() {
     }
   };
 
-  // Get date range based on active tab
+  // Update the getDateRange function to return Date objects
   const getDateRange = () => {
     const now = new Date();
-    let startDate, endDate;
-    
-    if (activeTab === 'week') {
-      // Get current week (Monday to Friday)
-      const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-      startDate = new Date(now);
-      // If it's Sunday, go to previous Monday
-      if (day === 0) {
-        startDate.setDate(now.getDate() - 6);
-      } else {
-        // Go to Monday of current week
-        startDate.setDate(now.getDate() - (day - 1));
-      }
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6); // Sunday (6 days after Monday)
-    } else if (activeTab === 'month') {
-      // Current month (1st to end of month)
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (activeTab === 'year') {
-      // Current year (1-Jan to 31-Dec)
-      startDate = new Date(now.getFullYear(), 0, 1); // January 1st
-      endDate = new Date(now.getFullYear(), 11, 31); // December 31st
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (activeTab) {
+      case 'week':
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        endDate = new Date();
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     }
-    
-    // Convert to ISO string and split to remove time
-    // ensure to keep the time as 00:00:00 and date not change
-    const formatDateToYYYYMMDD = (date: Date | undefined) => {
-      if (!date) return '';
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
 
-    const startDateStr = formatDateToYYYYMMDD(startDate);
-    const endDateStr = formatDateToYYYYMMDD(endDate);
-
-    console.log(startDateStr, endDateStr);
-
-    return {
-      startDate: startDateStr,
-      endDate: endDateStr
-    };
+    return { startDate, endDate };
   };
 
-  // New function to fetch transactions and calculate financial summary
-  const fetchFinancialSummary = async () => {
-    try {
-      // Get date range based on active tab
-      const { startDate, endDate } = getDateRange();
-      
-      // Calculate previous period date range
-      const getPreviousPeriodRange = () => {
-        const now = new Date();
-        let startDate, endDate;
-        
-        if (activeTab === 'week') {
-          // Previous week (Monday to Friday)
-          const day = now.getDay();
-          startDate = new Date(now);
-          // If it's Sunday, go to previous Monday
-          if (day === 0) {
-            startDate.setDate(now.getDate() - 13); // Go to Monday of previous week
-          } else {
-            // Go to Monday of previous week
-            startDate.setDate(now.getDate() - (day - 1) - 7);
-          }
-          endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + 6); // Sunday (6 days after Monday)
-        } else if (activeTab === 'month') {
-          // Previous month (1st to end of month)
-          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-        } else if (activeTab === 'year') {
-          // Previous year (1-Jan to 31-Dec)
-          startDate = new Date(now.getFullYear() - 1, 0, 1); // January 1st of previous year
-          endDate = new Date(now.getFullYear() - 1, 11, 31); // December 31st of previous year
-        }
-        
-        return {
-          startDate: startDate?.toISOString().split('T')[0],
-          endDate: endDate?.toISOString().split('T')[0]
-        };
-      };
+  // Update the getPreviousPeriodRange function to return Date objects
+  const getPreviousPeriodRange = () => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
 
+    switch (activeTab) {
+      case 'week':
+        startDate = new Date(now.setDate(now.getDate() - 14));
+        endDate = new Date(now.setDate(now.getDate() + 6));
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear() - 1, 0, 1);
+        endDate = new Date(now.getFullYear() - 1, 11, 31);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    }
+
+    return { startDate, endDate };
+  };
+
+  // Helper function to format date to YYYY-MM-DD
+  const formatDateToYYYYMMDD = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  // Update the fetchFinancialSummary function
+  const fetchFinancialSummary = async () => {
+    if (!session?.user) return;
+
+    try {
+      const { startDate, endDate } = getDateRange();
       const { startDate: prevStartDate, endDate: prevEndDate } = getPreviousPeriodRange();
-      
-      // Fetch transactions for current period
-      const currentResponse = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}&limit=10000`);
-      if (!currentResponse.ok) {
-        throw new Error('Failed to fetch current period transactions');
+
+      if (!startDate || !prevStartDate) {
+        console.error('Invalid date range');
+        return;
       }
-      const currentData = await currentResponse.json();
-      const currentTransactions = currentData.transactions || [];
-      
-      // Fetch transactions for previous period
-      const prevResponse = await fetch(`/api/transactions?startDate=${prevStartDate}&endDate=${prevEndDate}&limit=10000`);
-      if (!prevResponse.ok) {
-        throw new Error('Failed to fetch previous period transactions');
-      }
-      const prevData = await prevResponse.json();
-      const prevTransactions = prevData.transactions || [];
-      
-      // Calculate current period totals
-      let currentTotalIncome = 0;
-      let currentTotalExpenses = 0;
-      let currentTotalSavings = 0;
-      
-      // Calculate previous period totals
-      let prevTotalIncome = 0;
-      let prevTotalExpenses = 0;
-      let prevTotalSavings = 0;
-      
-      // Track spending by category
-      const categories: Record<string, number> = {};
-      
-      // Track savings by category
-      const savingsCategories: Record<string, number> = {};
-      
-      // Process current period transactions
-      currentTransactions.forEach((transaction: Transaction) => {
-        if (transaction.type === 'income') {
-          currentTotalIncome += transaction.amount;
-        } else if (transaction.type === 'expense') {
-          currentTotalExpenses += transaction.amount;
-          
-          // Add to category totals for expenses only
-          const category = transaction.category || 'Other';
-          categories[category] = (categories[category] || 0) + transaction.amount;
-        } else if (transaction.type === 'saving') {
-          currentTotalSavings += transaction.amount;
-          
-          // Add to savings category totals
-          const category = transaction.category || 'Other';
-          savingsCategories[category] = (savingsCategories[category] || 0) + transaction.amount;
-        }
-      });
-      
-      // Process previous period transactions
-      prevTransactions.forEach((transaction: Transaction) => {
-        if (transaction.type === 'income') {
-          prevTotalIncome += transaction.amount;
-        } else if (transaction.type === 'expense') {
-          prevTotalExpenses += transaction.amount;
-        } else if (transaction.type === 'saving') {
-          prevTotalSavings += transaction.amount;
-        }
-      });
-      
+
+      // Get current period summaries from API
+      const currentRes = await fetch(`/api/financial-summary?year=${startDate.getFullYear()}&month=${startDate.getMonth() + 1}`);
+      const currentSummaries = await currentRes.json();
+
+      // Get previous period summaries from API
+      const prevRes = await fetch(`/api/financial-summary?year=${prevStartDate.getFullYear()}&month=${prevStartDate.getMonth() + 1}`);
+      const prevSummaries = await prevRes.json();
+
+      // Calculate totals for current period
+      const currentIncome = currentSummaries
+        .filter((s: any) => s.type === 'INCOME')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const currentExpenses = currentSummaries
+        .filter((s: any) => s.type === 'EXPENSE')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const currentSavings = currentSummaries
+        .filter((s: any) => s.type === 'SAVING')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const currentNetFlow = currentIncome - currentExpenses;
+
+      // Calculate totals for previous period
+      const prevIncome = prevSummaries
+        .filter((s: any) => s.type === 'INCOME')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const prevExpenses = prevSummaries
+        .filter((s: any) => s.type === 'EXPENSE')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const prevSavings = prevSummaries
+        .filter((s: any) => s.type === 'SAVING')
+        .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
+      const prevNetFlow = prevIncome - prevExpenses;
+
       // Calculate trends
       const calculateTrend = (current: number, previous: number) => {
-        if (previous === 0) return current > 0 ? '+100%' : '0%';
-        const change = ((current - previous) / previous) * 100;
-        return `${change >= 0 ? '+' : ''}${Math.round(change)}%`;
+        if (previous === 0) return 0;
+        return ((current - previous) / previous) * 100;
       };
-      
-      const currentNetFlow = currentTotalIncome +  currentTotalExpenses - currentTotalSavings;
-      const prevNetFlow = prevTotalIncome + prevTotalExpenses - prevTotalSavings;
-      
+
+      // Update state with calculated values
       setFinancialSummary({
-        totalIncome: currentTotalIncome,
-        totalExpenses: currentTotalExpenses,
-        totalSavings: currentTotalSavings,
-        netFlow: currentNetFlow,
-        incomeTrend: calculateTrend(currentTotalIncome, prevTotalIncome),
-        expensesTrend: calculateTrend(currentTotalExpenses, prevTotalExpenses),
-        savingsTrend: calculateTrend(currentTotalSavings, prevTotalSavings),
-        netFlowTrend: calculateTrend(currentNetFlow, prevNetFlow)
-      });
-      
-      // Calculate category percentages and prepare for display
-      if (currentTotalExpenses > 0) {
-        const categoryData = Object.entries(categories)
-          .map(([category, amount]) => ({
-            category,
-            amount,
-            percentage: Math.round((amount / currentTotalExpenses) * 100),
-            color: categoryColors[category] || 'bg-gray-400'
-          }))
-          .sort((a, b) => b.amount - a.amount) // Sort by amount descending
-          .slice(0, 5); // Take top 5 categories
-        
-        // If we have more than 5 categories, add an "Other" category with the remaining amount
-        if (Object.keys(categories).length > 5) {
-          const topCategoriesAmount = categoryData.reduce((sum, item) => sum + item.amount, 0);
-          const otherAmount = currentTotalExpenses - topCategoriesAmount;
-          
-          if (otherAmount > 0) {
-            categoryData.push({
-              category: 'Other',
-              amount: otherAmount,
-              percentage: Math.round((otherAmount / currentTotalExpenses) * 100),
-              color: 'bg-gray-400'
-            });
-          }
+        income: {
+          amount: currentIncome,
+          trend: calculateTrend(currentIncome, prevIncome)
+        },
+        expenses: {
+          amount: currentExpenses,
+          trend: calculateTrend(currentExpenses, prevExpenses)
+        },
+        savings: {
+          amount: currentSavings,
+          trend: calculateTrend(currentSavings, prevSavings)
+        },
+        netFlow: {
+          amount: currentNetFlow,
+          trend: calculateTrend(currentNetFlow, prevNetFlow)
         }
-        
-        setCategorySpending(categoryData);
-      } else {
-        setCategorySpending([]);
-      }
-      
-      // Calculate savings category percentages and prepare for display
-      if (currentTotalSavings > 0) {
-        const savingsCategoryData = Object.entries(savingsCategories)
-          .map(([category, amount]) => ({
-            category,
-            amount,
-            percentage: Math.round((amount / currentTotalSavings) * 100),
-            color: categoryColors[category] || getSavingCategoryColor(category)
-          }))
-          .sort((a, b) => b.amount - a.amount); // Sort by amount descending
-        
-        setSavingsByCategory(savingsCategoryData);
-      } else {
-        setSavingsByCategory([]);
-      }
+      });
+
+      // Calculate category spending
+      const categorySpending = currentSummaries
+        .filter((s: any) => s.type === 'EXPENSE')
+        .reduce((acc: Record<string, number>, s: any) => {
+          acc[s.category] = (acc[s.category] || 0) + Number(s.amount);
+          return acc;
+        }, {} as Record<string, number>);
+
+      setCategorySpending(categorySpending);
+
+      // Calculate savings by category
+      const savingsByCategory = currentSummaries
+        .filter((s: any) => s.type === 'SAVING')
+        .reduce((acc: Record<string, number>, s: any) => {
+          acc[s.category] = (acc[s.category] || 0) + Number(s.amount);
+          return acc;
+        }, {} as Record<string, number>);
+
+      setSavingsByCategory(savingsByCategory);
     } catch (error) {
       console.error('Error fetching financial summary:', error);
     }
@@ -591,8 +538,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6">
           <SummaryCard 
             title="TOTAL INCOME" 
-            amount={formatCurrency(financialSummary.totalIncome)} 
-            trend={financialSummary.incomeTrend} 
+            amount={formatCurrency(financialSummary.income.amount)} 
+            trend={financialSummary.income.trend.toString()} 
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -602,9 +549,9 @@ export default function Dashboard() {
           />
           <SummaryCard 
             title="TOTAL EXPENSES" 
-            amount={formatCurrency(financialSummary.totalExpenses)} 
-            trend={financialSummary.expensesTrend}
-            trendColor={financialSummary.expensesTrend.startsWith('+') ? "text-red-600" : "text-green-600"}
+            amount={formatCurrency(financialSummary.expenses.amount)} 
+            trend={financialSummary.expenses.trend.toString()}
+            trendColor={financialSummary.expenses.trend > 0 ? "text-red-600" : "text-green-600"}
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -614,8 +561,8 @@ export default function Dashboard() {
           />
           <SummaryCard 
             title="TOTAL SAVINGS" 
-            amount={formatCurrency(financialSummary.totalSavings)} 
-            trend={financialSummary.savingsTrend} 
+            amount={formatCurrency(financialSummary.savings.amount)} 
+            trend={financialSummary.savings.trend.toString()} 
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -625,9 +572,9 @@ export default function Dashboard() {
           />
           <SummaryCard 
             title="NET FLOW" 
-            amount={formatCurrency(financialSummary.netFlow)} 
-            trend={financialSummary.netFlowTrend}
-            trendColor={financialSummary.netFlow >= 0 ? "text-green-600" : "text-red-600"}
+            amount={formatCurrency(financialSummary.netFlow.amount)} 
+            trend={financialSummary.netFlow.trend.toString()}
+            trendColor={financialSummary.netFlow.amount >= 0 ? "text-green-600" : "text-red-600"}
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -690,7 +637,7 @@ export default function Dashboard() {
                 <div className="flex flex-col md:flex-row">
                   <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
                     <div className="w-48 h-48 relative">
-                      {financialSummary.totalIncome > 0 || financialSummary.totalExpenses > 0 || financialSummary.totalSavings > 0 ? (
+                      {financialSummary.income.amount > 0 || financialSummary.expenses.amount > 0 || financialSummary.savings.amount > 0 ? (
                         <svg viewBox="0 0 100 100" className="w-full h-full">
                           {/* Create concentric rings/donut chart */}
                           {/* Outer ring (Income) */}
@@ -714,8 +661,8 @@ export default function Dashboard() {
                             stroke="#EF4444" 
                             strokeWidth="10"
                             strokeDasharray="188.4"
-                            strokeDashoffset={financialSummary.totalIncome > 0 ? 
-                              (1 - financialSummary.totalExpenses / financialSummary.totalIncome) * 188.4 : 0}
+                            strokeDashoffset={financialSummary.income.amount > 0 ? 
+                              (1 - financialSummary.expenses.amount / financialSummary.income.amount) * 188.4 : 0}
                           />
                           
                           {/* Inner ring (Savings) */}
@@ -727,8 +674,8 @@ export default function Dashboard() {
                             stroke="#3B82F6" 
                             strokeWidth="10"
                             strokeDasharray="125.6"
-                            strokeDashoffset={financialSummary.totalIncome > 0 ? 
-                              (1 - financialSummary.totalSavings / financialSummary.totalIncome) * 125.6 : 0}
+                            strokeDashoffset={financialSummary.income.amount > 0 ? 
+                              (1 - financialSummary.savings.amount / financialSummary.income.amount) * 125.6 : 0}
                           />
                           
                           {/* Labels */}
@@ -753,21 +700,21 @@ export default function Dashboard() {
                           <div className="w-3 h-3 rounded bg-green-500 mr-2"></div>
                           <span className="text-sm">Income (Outer Ring)</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(financialSummary.totalIncome)}</span>
+                        <span className="font-medium">{formatCurrency(financialSummary.income.amount)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="w-3 h-3 rounded bg-red-500 mr-2"></div>
                           <span className="text-sm">Expenses (Middle Ring)</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(financialSummary.totalExpenses)}</span>
+                        <span className="font-medium">{formatCurrency(financialSummary.expenses.amount)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="w-3 h-3 rounded bg-blue-500 mr-2"></div>
                           <span className="text-sm">Savings (Inner Ring)</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(financialSummary.totalSavings)}</span>
+                        <span className="font-medium">{formatCurrency(financialSummary.savings.amount)}</span>
                       </div>
                       <div className="pt-2 mt-2 border-t">
                         <div className="flex items-center justify-between">
@@ -775,8 +722,8 @@ export default function Dashboard() {
                             <div className="w-3 h-3 rounded bg-purple-500 mr-2"></div>
                             <span className="text-sm">Net Flow</span>
                           </div>
-                          <span className={`font-medium ${financialSummary.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(financialSummary.netFlow)}
+                          <span className={`font-medium ${financialSummary.netFlow.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(financialSummary.netFlow.amount)}
                           </span>
                         </div>
                       </div>
@@ -791,26 +738,28 @@ export default function Dashboard() {
               <div className="p-4 flex flex-col md:flex-row">
                 <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
                   <div className="w-48 h-48 relative">
-                    {categorySpending.length > 0 ? (
+                    {Object.keys(categorySpending).length > 0 ? (
                       <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                         {/* Create pie slices */}
-                        {categorySpending.map((category, index) => {
+                        {Object.entries(categorySpending).map(([category, amount]) => {
                           // Calculate the slice position
                           let previousPercentage = 0;
-                          for (let i = 0; i < index; i++) {
-                            previousPercentage += categorySpending[i].percentage;
+                          for (const [otherCategory, otherAmount] of Object.entries(categorySpending)) {
+                            if (otherCategory !== category) {
+                              previousPercentage += otherAmount;
+                            }
                           }
                           
                           // Convert percentages to coordinates on a circle
                           const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
                           const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
                           
-                          const endPercentage = previousPercentage + category.percentage;
+                          const endPercentage = previousPercentage + amount;
                           const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
                           const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
                           
                           // Flag for large arc (> 180 degrees)
-                          const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                          const largeArcFlag = amount > 50 ? 1 : 0;
                           
                           // Create SVG arc path
                           const path = `
@@ -821,15 +770,15 @@ export default function Dashboard() {
                           `;
                           
                           // Get color from Tailwind class to hex mapping
-                          const hexColor = tailwindToHex[category.color] || "#9ca3af";
+                          const hexColor = tailwindToHex[categoryColors[category] || 'bg-gray-400'] || "#9ca3af";
                           
                           return (
                             <path
-                              key={category.category}
+                              key={category}
                               d={path}
                               fill={hexColor}
                               className="hover:opacity-90 transition-opacity duration-200"
-                              onMouseEnter={() => setHoveredCategory(category.category)}
+                              onMouseEnter={() => setHoveredCategory(category)}
                               onMouseLeave={() => setHoveredCategory(null)}
                               stroke="#fff"
                               strokeWidth="1"
@@ -852,15 +801,15 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full md:w-1/2">
                   <div className="space-y-4">
-                    {categorySpending.length > 0 ? (
-                      categorySpending.map((category, index) => (
+                    {Object.keys(categorySpending).length > 0 ? (
+                      Object.entries(categorySpending).map(([category, amount]) => (
                         <CategoryItem 
-                          key={index}
-                          category={category.category} 
-                          amount={formatCurrency(category.amount)} 
-                          percentage={category.percentage} 
-                          color={category.color}
-                          isHighlighted={hoveredCategory === category.category} 
+                          key={category}
+                          category={category} 
+                          amount={formatCurrency(amount)} 
+                          percentage={Math.round((amount / Object.values(categorySpending).reduce((a, b) => a + b, 0)) * 100)} 
+                          color={categoryColors[category] || 'bg-gray-400'}
+                          isHighlighted={hoveredCategory === category} 
                         />
                       ))
                     ) : (
@@ -878,26 +827,28 @@ export default function Dashboard() {
               <div className="p-4 flex flex-col md:flex-row">
                 <div className="w-full md:w-1/2 flex items-center justify-center mb-6 md:mb-0">
                   <div className="w-48 h-48 relative">
-                    {savingsByCategory.length > 0 ? (
+                    {Object.keys(savingsByCategory).length > 0 ? (
                       <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                         {/* Create pie slices */}
-                        {savingsByCategory.map((category, index) => {
+                        {Object.entries(savingsByCategory).map(([category, amount]) => {
                           // Calculate the slice position
                           let previousPercentage = 0;
-                          for (let i = 0; i < index; i++) {
-                            previousPercentage += savingsByCategory[i].percentage;
+                          for (const [otherCategory, otherAmount] of Object.entries(savingsByCategory)) {
+                            if (otherCategory !== category) {
+                              previousPercentage += otherAmount;
+                            }
                           }
                           
                           // Convert percentages to coordinates on a circle
                           const startX = 50 + 40 * Math.cos(2 * Math.PI * previousPercentage / 100);
                           const startY = 50 + 40 * Math.sin(2 * Math.PI * previousPercentage / 100);
                           
-                          const endPercentage = previousPercentage + category.percentage;
+                          const endPercentage = previousPercentage + amount;
                           const endX = 50 + 40 * Math.cos(2 * Math.PI * endPercentage / 100);
                           const endY = 50 + 40 * Math.sin(2 * Math.PI * endPercentage / 100);
                           
                           // Flag for large arc (> 180 degrees)
-                          const largeArcFlag = category.percentage > 50 ? 1 : 0;
+                          const largeArcFlag = amount > 50 ? 1 : 0;
                           
                           // Create SVG arc path
                           const path = `
@@ -907,16 +858,16 @@ export default function Dashboard() {
                             Z
                           `;
                           
-                          // Get color from Tailwind class to hex mapping - use category specific colors
-                          const hexColor = tailwindToHex[category.color] || "#3B82F6";
+                          // Get color from Tailwind class to hex mapping
+                          const hexColor = tailwindToHex[categoryColors[category] || 'bg-gray-400'] || "#3B82F6";
                           
                           return (
                             <path
-                              key={category.category}
+                              key={category}
                               d={path}
                               fill={hexColor}
                               className="hover:opacity-90 transition-opacity duration-200"
-                              onMouseEnter={() => setHoveredCategory(category.category)}
+                              onMouseEnter={() => setHoveredCategory(category)}
                               onMouseLeave={() => setHoveredCategory(null)}
                               stroke="#fff"
                               strokeWidth="1"
@@ -939,15 +890,15 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full md:w-1/2">
                   <div className="space-y-4">
-                    {savingsByCategory.length > 0 ? (
-                      savingsByCategory.map((category, index) => (
+                    {Object.keys(savingsByCategory).length > 0 ? (
+                      Object.entries(savingsByCategory).map(([category, amount]) => (
                         <CategoryItem 
-                          key={index}
-                          category={category.category} 
-                          amount={formatCurrency(category.amount)} 
-                          percentage={category.percentage} 
-                          color={category.color}
-                          isHighlighted={hoveredCategory === category.category} 
+                          key={category}
+                          category={category} 
+                          amount={formatCurrency(amount)} 
+                          percentage={Math.round((amount / Object.values(savingsByCategory).reduce((a, b) => a + b, 0)) * 100)} 
+                          color={categoryColors[category] || 'bg-gray-400'}
+                          isHighlighted={hoveredCategory === category} 
                         />
                       ))
                     ) : (

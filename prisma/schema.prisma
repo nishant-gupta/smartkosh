@@ -26,6 +26,7 @@ model User {
   financialProfile FinancialProfile? // Relation to FinancialProfile model
   notifications Notification[] // Relation to Notification model
   backgroundJobs BackgroundJob[] // Relation to BackgroundJob model
+  financialSummaries FinancialSummary[] // Relation to FinancialSummary model
 }
 
 model Account {
@@ -136,4 +137,21 @@ model BackgroundJob {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinancialSummary {
+  id        String   @id @default(uuid())
+  userId    String
+  year      Int
+  month     Int
+  category  String
+  type      String
+  amount    Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, year, month])
+  @@index([userId, category, type])
 } 
