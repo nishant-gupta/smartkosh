@@ -154,4 +154,5 @@ model FinancialSummary {
 
   @@index([userId, year, month])
   @@index([userId, category, type])
+  @@unique([userId, year, month, category, type])
 } 

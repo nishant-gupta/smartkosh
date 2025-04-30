@@ -283,32 +283,32 @@ export default function Dashboard() {
 
       // Calculate totals for current period
       const currentIncome = currentSummaries
-        .filter((s: any) => s.type === 'INCOME')
+        .filter((s: any) => s.type === 'income')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentExpenses = currentSummaries
-        .filter((s: any) => s.type === 'EXPENSE')
+        .filter((s: any) => s.type === 'expense')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentSavings = currentSummaries
-        .filter((s: any) => s.type === 'SAVING')
+        .filter((s: any) => s.type === 'saving')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentNetFlow = currentIncome - currentExpenses;
 
       // Calculate totals for previous period
       const prevIncome = prevSummaries
-        .filter((s: any) => s.type === 'INCOME')
+        .filter((s: any) => s.type === 'income')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevExpenses = prevSummaries
-        .filter((s: any) => s.type === 'EXPENSE')
+        .filter((s: any) => s.type === 'expense')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevSavings = prevSummaries
-        .filter((s: any) => s.type === 'SAVING')
+        .filter((s: any) => s.type === 'saving')
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevNetFlow = prevIncome - prevExpenses;
 
-      // Calculate trends
+      // Calculate trends and round to no decimal places
       const calculateTrend = (current: number, previous: number) => {
         if (previous === 0) return 0;
-        return ((current - previous) / previous) * 100;
+        return Math.round(((current - previous) / previous) * 100);
       };
 
       // Update state with calculated values
@@ -539,7 +539,7 @@ export default function Dashboard() {
           <SummaryCard 
             title="TOTAL INCOME" 
             amount={formatCurrency(financialSummary.income.amount)} 
-            trend={financialSummary.income.trend.toString()} 
+            trend={financialSummary.income.trend.toString() + '%'} 
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -550,7 +550,7 @@ export default function Dashboard() {
           <SummaryCard 
             title="TOTAL EXPENSES" 
             amount={formatCurrency(financialSummary.expenses.amount)} 
-            trend={financialSummary.expenses.trend.toString()}
+            trend={financialSummary.expenses.trend.toString() + '%'}
             trendColor={financialSummary.expenses.trend > 0 ? "text-red-600" : "text-green-600"}
             period={`vs last ${activeTab}`} 
             icon={
@@ -562,7 +562,7 @@ export default function Dashboard() {
           <SummaryCard 
             title="TOTAL SAVINGS" 
             amount={formatCurrency(financialSummary.savings.amount)} 
-            trend={financialSummary.savings.trend.toString()} 
+            trend={financialSummary.savings.trend.toString() + '%'} 
             period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -573,7 +573,7 @@ export default function Dashboard() {
           <SummaryCard 
             title="NET FLOW" 
             amount={formatCurrency(financialSummary.netFlow.amount)} 
-            trend={financialSummary.netFlow.trend.toString()}
+            trend={financialSummary.netFlow.trend.toString() + '%'}
             trendColor={financialSummary.netFlow.amount >= 0 ? "text-green-600" : "text-red-600"}
             period={`vs last ${activeTab}`} 
             icon={
