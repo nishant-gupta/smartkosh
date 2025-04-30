@@ -188,25 +188,46 @@ export default function Dashboard() {
     let startDate, endDate;
     
     if (activeTab === 'week') {
-      // Get current week (Sunday to Saturday)
-      const day = now.getDay(); // 0 = Sunday, 6 = Saturday
+      // Get current week (Monday to Friday)
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
       startDate = new Date(now);
-      startDate.setDate(now.getDate() - day); // Go to last Sunday
+      // If it's Sunday, go to previous Monday
+      if (day === 0) {
+        startDate.setDate(now.getDate() - 6);
+      } else {
+        // Go to Monday of current week
+        startDate.setDate(now.getDate() - (day - 1));
+      }
       endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6); // Saturday
+      endDate.setDate(startDate.getDate() + 6); // Sunday (6 days after Monday)
     } else if (activeTab === 'month') {
-      // Current month
+      // Current month (1st to end of month)
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     } else if (activeTab === 'year') {
-      // Current year
-      startDate = new Date(now.getFullYear(), 0, 1);
-      endDate = new Date(now.getFullYear(), 11, 31);
+      // Current year (1-Jan to 31-Dec)
+      startDate = new Date(now.getFullYear(), 0, 1); // January 1st
+      endDate = new Date(now.getFullYear(), 11, 31); // December 31st
     }
     
+    // Convert to ISO string and split to remove time
+    // ensure to keep the time as 00:00:00 and date not change
+    const formatDateToYYYYMMDD = (date: Date | undefined) => {
+      if (!date) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const startDateStr = formatDateToYYYYMMDD(startDate);
+    const endDateStr = formatDateToYYYYMMDD(endDate);
+
+    console.log(startDateStr, endDateStr);
+
     return {
-      startDate: startDate?.toISOString().split('T')[0],
-      endDate: endDate?.toISOString().split('T')[0]
+      startDate: startDateStr,
+      endDate: endDateStr
     };
   };
 
@@ -216,20 +237,67 @@ export default function Dashboard() {
       // Get date range based on active tab
       const { startDate, endDate } = getDateRange();
       
-      // Fetch transactions for the selected period
-      const response = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}&limit=10000`);
+      // Calculate previous period date range
+      const getPreviousPeriodRange = () => {
+        const now = new Date();
+        let startDate, endDate;
+        
+        if (activeTab === 'week') {
+          // Previous week (Monday to Friday)
+          const day = now.getDay();
+          startDate = new Date(now);
+          // If it's Sunday, go to previous Monday
+          if (day === 0) {
+            startDate.setDate(now.getDate() - 13); // Go to Monday of previous week
+          } else {
+            // Go to Monday of previous week
+            startDate.setDate(now.getDate() - (day - 1) - 7);
+          }
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6); // Sunday (6 days after Monday)
+        } else if (activeTab === 'month') {
+          // Previous month (1st to end of month)
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        } else if (activeTab === 'year') {
+          // Previous year (1-Jan to 31-Dec)
+          startDate = new Date(now.getFullYear() - 1, 0, 1); // January 1st of previous year
+          endDate = new Date(now.getFullYear() - 1, 11, 31); // December 31st of previous year
+        }
+        
+        return {
+          startDate: startDate?.toISOString().split('T')[0],
+          endDate: endDate?.toISOString().split('T')[0]
+        };
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch transactions');
+      const { startDate: prevStartDate, endDate: prevEndDate } = getPreviousPeriodRange();
+      
+      // Fetch transactions for current period
+      const currentResponse = await fetch(`/api/transactions?startDate=${startDate}&endDate=${endDate}&limit=10000`);
+      if (!currentResponse.ok) {
+        throw new Error('Failed to fetch current period transactions');
       }
+      const currentData = await currentResponse.json();
+      const currentTransactions = currentData.transactions || [];
       
-      const data = await response.json();
-      const periodTransactions = data.transactions || [];
+      // Fetch transactions for previous period
+      const prevResponse = await fetch(`/api/transactions?startDate=${prevStartDate}&endDate=${prevEndDate}&limit=10000`);
+      if (!prevResponse.ok) {
+        throw new Error('Failed to fetch previous period transactions');
+      }
+      const prevData = await prevResponse.json();
+      const prevTransactions = prevData.transactions || [];
       
-      // Calculate totals
-      let totalIncome = 0;
-      let totalExpenses = 0;
-      let totalSavings = 0;
+      // Calculate current period totals
+      let currentTotalIncome = 0;
+      let currentTotalExpenses = 0;
+      let currentTotalSavings = 0;
+      
+      // Calculate previous period totals
+      let prevTotalIncome = 0;
+      let prevTotalExpenses = 0;
+      let prevTotalSavings = 0;
       
       // Track spending by category
       const categories: Record<string, number> = {};
@@ -237,48 +305,64 @@ export default function Dashboard() {
       // Track savings by category
       const savingsCategories: Record<string, number> = {};
       
-      periodTransactions.forEach((transaction: Transaction) => {
+      // Process current period transactions
+      currentTransactions.forEach((transaction: Transaction) => {
         if (transaction.type === 'income') {
-          totalIncome += transaction.amount;
+          currentTotalIncome += transaction.amount;
         } else if (transaction.type === 'expense') {
-          totalExpenses += transaction.amount;
+          currentTotalExpenses += transaction.amount;
           
           // Add to category totals for expenses only
           const category = transaction.category || 'Other';
           categories[category] = (categories[category] || 0) + transaction.amount;
         } else if (transaction.type === 'saving') {
-          totalSavings += transaction.amount;
+          currentTotalSavings += transaction.amount;
           
           // Add to savings category totals
           const category = transaction.category || 'Other';
           savingsCategories[category] = (savingsCategories[category] || 0) + transaction.amount;
-        } else if (transaction.type === 'transfer') {
-          // Transfers don't affect income/expense totals or category breakdown
-          // They just move money between accounts
         }
       });
       
-      const netFlow = totalIncome - totalExpenses - totalSavings;
+      // Process previous period transactions
+      prevTransactions.forEach((transaction: Transaction) => {
+        if (transaction.type === 'income') {
+          prevTotalIncome += transaction.amount;
+        } else if (transaction.type === 'expense') {
+          prevTotalExpenses += transaction.amount;
+        } else if (transaction.type === 'saving') {
+          prevTotalSavings += transaction.amount;
+        }
+      });
       
-      // For now, we'll set static trends until we implement historical comparison
+      // Calculate trends
+      const calculateTrend = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? '+100%' : '0%';
+        const change = ((current - previous) / previous) * 100;
+        return `${change >= 0 ? '+' : ''}${Math.round(change)}%`;
+      };
+      
+      const currentNetFlow = currentTotalIncome +  currentTotalExpenses - currentTotalSavings;
+      const prevNetFlow = prevTotalIncome + prevTotalExpenses - prevTotalSavings;
+      
       setFinancialSummary({
-        totalIncome,
-        totalExpenses,
-        totalSavings,
-        netFlow,
-        incomeTrend: '+12%',  // These would ideally be calculated from previous month's data
-        expensesTrend: '+8%',
-        savingsTrend: '+15%',
-        netFlowTrend: netFlow > 0 ? '+23%' : '-10%'
+        totalIncome: currentTotalIncome,
+        totalExpenses: currentTotalExpenses,
+        totalSavings: currentTotalSavings,
+        netFlow: currentNetFlow,
+        incomeTrend: calculateTrend(currentTotalIncome, prevTotalIncome),
+        expensesTrend: calculateTrend(currentTotalExpenses, prevTotalExpenses),
+        savingsTrend: calculateTrend(currentTotalSavings, prevTotalSavings),
+        netFlowTrend: calculateTrend(currentNetFlow, prevNetFlow)
       });
       
       // Calculate category percentages and prepare for display
-      if (totalExpenses > 0) {
+      if (currentTotalExpenses > 0) {
         const categoryData = Object.entries(categories)
           .map(([category, amount]) => ({
             category,
             amount,
-            percentage: Math.round((amount / totalExpenses) * 100),
+            percentage: Math.round((amount / currentTotalExpenses) * 100),
             color: categoryColors[category] || 'bg-gray-400'
           }))
           .sort((a, b) => b.amount - a.amount) // Sort by amount descending
@@ -287,13 +371,13 @@ export default function Dashboard() {
         // If we have more than 5 categories, add an "Other" category with the remaining amount
         if (Object.keys(categories).length > 5) {
           const topCategoriesAmount = categoryData.reduce((sum, item) => sum + item.amount, 0);
-          const otherAmount = totalExpenses - topCategoriesAmount;
+          const otherAmount = currentTotalExpenses - topCategoriesAmount;
           
           if (otherAmount > 0) {
             categoryData.push({
               category: 'Other',
               amount: otherAmount,
-              percentage: Math.round((otherAmount / totalExpenses) * 100),
+              percentage: Math.round((otherAmount / currentTotalExpenses) * 100),
               color: 'bg-gray-400'
             });
           }
@@ -305,12 +389,12 @@ export default function Dashboard() {
       }
       
       // Calculate savings category percentages and prepare for display
-      if (totalSavings > 0) {
+      if (currentTotalSavings > 0) {
         const savingsCategoryData = Object.entries(savingsCategories)
           .map(([category, amount]) => ({
             category,
             amount,
-            percentage: Math.round((amount / totalSavings) * 100),
+            percentage: Math.round((amount / currentTotalSavings) * 100),
             color: categoryColors[category] || getSavingCategoryColor(category)
           }))
           .sort((a, b) => b.amount - a.amount); // Sort by amount descending
@@ -509,7 +593,7 @@ export default function Dashboard() {
             title="TOTAL INCOME" 
             amount={formatCurrency(financialSummary.totalIncome)} 
             trend={financialSummary.incomeTrend} 
-            period="vs last month" 
+            period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
@@ -521,7 +605,7 @@ export default function Dashboard() {
             amount={formatCurrency(financialSummary.totalExpenses)} 
             trend={financialSummary.expensesTrend}
             trendColor={financialSummary.expensesTrend.startsWith('+') ? "text-red-600" : "text-green-600"}
-            period="vs last month" 
+            period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -532,7 +616,7 @@ export default function Dashboard() {
             title="TOTAL SAVINGS" 
             amount={formatCurrency(financialSummary.totalSavings)} 
             trend={financialSummary.savingsTrend} 
-            period="vs last month" 
+            period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -544,7 +628,7 @@ export default function Dashboard() {
             amount={formatCurrency(financialSummary.netFlow)} 
             trend={financialSummary.netFlowTrend}
             trendColor={financialSummary.netFlow >= 0 ? "text-green-600" : "text-red-600"}
-            period="vs last month" 
+            period={`vs last ${activeTab}`} 
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
@@ -1216,7 +1300,7 @@ function getTransactionIcon(category: string): JSX.Element {
     'Travel': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />),
     'Investments': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />),
     'Salary': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />),
-    'Business': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />),
+    'Business': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />),
     'Gifts & Donations': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112.83 1.83l-2.83 2.83m0-8a2 2 0 100 4 2 2 0 000-4zm0 0l-8 6h16l-8-6z" />),
     'Income': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />),
     'Other': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />)
