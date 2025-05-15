@@ -18,7 +18,7 @@ export async function invokeProcessCSV(jobId: string, bucket: string, key: strin
   const lambdaClient = getLambdaClient();
   
   return lambdaClient.send(new InvokeCommand({
-    FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME as string,
+    FunctionName: process.env.AWS_LAMBDA_FN_NAME as string,
     Payload: JSON.stringify({
       jobId,
       data: {
