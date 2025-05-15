@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma';
 // @ts-ignore - csv-parser doesn't have type declarations
 import csv from 'csv-parser';
 import { Readable } from 'stream';
-import { z } from 'zod';
+// import { z } from 'zod';
+// import { financialSummaryQueue } from '@/lib/queue';
+import { uploadToS3 } from '@/lib/aws/s3';
+import { invokeProcessCSV } from '@/lib/aws/lambda';
 
 // Define interfaces for type safety
 interface CSVRow {
@@ -182,237 +185,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         NOW()
       )
     `;
-    
-    // Start processing in the background
-    console.log('Starting background processing');
-    
-    // Use setTimeout to simulate background processing without blocking the response
-    setTimeout(async () => {
-      try {
-        console.log('Processing CSV file in background');
-        
-        // Update job status to processing
-        await prisma.$executeRaw`
-          UPDATE "BackgroundJob"
-          SET status = 'processing', progress = 10, "updatedAt" = NOW()
-          WHERE id = ${jobId}
-        `;
-        
-        // Parse the CSV file
-        const transactions = await parseCSV(fileContent);
-        
-        if (transactions.length === 0) {
-          // Update job status to failed
-          await prisma.$executeRaw`
-            UPDATE "BackgroundJob"
-            SET status = 'failed', progress = 100, "updatedAt" = NOW(),
-                error = 'No valid transactions found in CSV'
-            WHERE id = ${jobId}
-          `;
-          
-          // Create notification for failure
-          await prisma.$executeRaw`
-            INSERT INTO "Notification" (
-              id,
-              "userId",
-              title,
-              message,
-              type,
-              read,
-              "createdAt",
-              "updatedAt"
-            )
-            VALUES (
-              ${`notif_${Date.now()}_${Math.floor(Math.random() * 1000000)}`},
-              ${user.id},
-              'Upload Failed',
-              'No valid transactions found in the CSV file.',
-              'ERROR',
-              false,
-              NOW(),
-              NOW()
-            )
-          `;
-          
-          console.log('No valid transactions found in CSV');
-          return;
-        }
-        
-        // Update job progress
-        await prisma.$executeRaw`
-          UPDATE "BackgroundJob"
-          SET progress = 30, "updatedAt" = NOW()
-          WHERE id = ${jobId}
-        `;
-        
-        console.log(`Processing ${transactions.length} transactions`);
-        
-        // Process transactions in smaller batches to reduce memory usage
-        const batchSize = 100;
-        let successCount = 0;
-        let failureCount = 0;
-        
-        for (let i = 0; i < transactions.length; i += batchSize) {
-          const batch = transactions.slice(i, i + batchSize);
-          const progress = Math.min(30 + Math.floor(60 * (i / transactions.length)), 90);
-          
-          // Update job progress
-          await prisma.$executeRaw`
-            UPDATE "BackgroundJob"
-            SET progress = ${progress}, "updatedAt" = NOW()
-            WHERE id = ${jobId}
-          `;
-          
-          // Process each transaction in the batch
-          for (const transaction of batch) {
-            try {
-              // Generate a unique ID for each transaction
-              const transactionId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
-              
-              // Format date correctly
-              let transactionDate;
-              try {
-                // Try to parse date from various formats
-                const dateParts = transaction.date.split(/[\/\-\.]/);
-                if (dateParts.length === 3) {
-                  //use DD/MM/YYYY format
-                  const day = dateParts[0];
-                  const month = dateParts[1];
-                  const year = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
-                  transactionDate = new Date(`${year}-${month}-${day}`);
-                // } else {
-                //   // Assume MM/DD/YYYY or DD/MM/YYYY format
-                //   // If first part is > 12, assume DD/MM/YYYY
-                //   const month = parseInt(dateParts[0]) > 12 ? dateParts[1] : dateParts[0];
-                //   const day = parseInt(dateParts[0]) > 12 ? dateParts[0] : dateParts[1];
-                //   const year = dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2];
-                //   transactionDate = new Date(`${year}-${month}-${day}`);
-                } else {
-                  // Try direct parsing
-                  transactionDate = new Date(transaction.date);
-                }
-                
-                // Check if date is valid
-                if (isNaN(transactionDate.getTime())) {
-                  throw new Error('Invalid date');
-                }
-              } catch (error) {
-                // Default to today if date parsing fails
-                transactionDate = new Date();
-              }
-              
-              // Insert transaction using raw SQL
-              await prisma.$executeRaw`
-                INSERT INTO "Transaction" (
-                  id,
-                  "userId",
-                  "accountId",
-                  date,
-                  description,
-                  amount,
-                  category,
-                  type,
-                  notes,
-                  "createdAt",
-                  "updatedAt"
-                )
-                VALUES (
-                  ${transactionId},
-                  ${user.id},
-                  ${accountId},
-                  ${transactionDate.toISOString()}::timestamp,
-                  ${transaction.description},
-                  ${transaction.amount},
-                  ${transaction.category || null},
-                  ${transaction.amount > 0 ? 'income' : 'expense'},
-                  ${transaction.notes || null},
-                  NOW(),
-                  NOW()
-                )
-              `;
-              
-              successCount++;
-            } catch (error) {
-              console.error('Error inserting transaction:', error);
-              failureCount++;
-            }
-          }
-        }
-        
-        // Update job status to completed
-        await prisma.$executeRaw`
-          UPDATE "BackgroundJob"
-          SET status = 'completed', progress = 100, "updatedAt" = NOW(),
-              result = ${JSON.stringify({
-                totalProcessed: transactions.length,
-                successCount,
-                failureCount
-              })}::jsonb
-          WHERE id = ${jobId}
-        `;
-        
-        // Create notification for success
-        await prisma.$executeRaw`
-          INSERT INTO "Notification" (
-            id,
-            "userId",
-            title,
-            message,
-            type,
-            read,
-            "createdAt",
-            "updatedAt"
-          )
-          VALUES (
-            ${`notif_${Date.now()}_${Math.floor(Math.random() * 1000000)}`},
-            ${user.id},
-            'Upload Complete',
-            ${`Successfully processed ${successCount} transactions from your CSV file.`},
-            'SUCCESS',
-            false,
-            NOW(),
-            NOW()
-          )
-        `;
-        
-        console.log(`Background processing completed. Success: ${successCount}, Failures: ${failureCount}`);
-      } catch (error) {
-        console.error('Error in background processing:', error);
-        
-        // Update job status to failed
-        await prisma.$executeRaw`
-          UPDATE "BackgroundJob"
-          SET status = 'failed', progress = 100, "updatedAt" = NOW(),
-              error = ${error instanceof Error ? error.message : 'Unknown error'}
-          WHERE id = ${jobId}
-        `;
-        
-        // Create notification for failure
-        await prisma.$executeRaw`
-          INSERT INTO "Notification" (
-            id,
-            "userId",
-            title,
-            message,
-            type,
-            read,
-            "createdAt",
-            "updatedAt"
-          )
-          VALUES (
-            ${`notif_${Date.now()}_${Math.floor(Math.random() * 1000000)}`},
-            ${user.id},
-            'Upload Failed',
-            'An error occurred while processing your CSV file. Please try again.',
-            'ERROR',
-            false,
-            NOW(),
-            NOW()
-          )
-        `;
-      }
-    }, 100); // Small delay to ensure response is sent first
-    
+
+    //generate a unique id for the file
+    const fileId = `${user.id}-${Date.now()}-${Math.floor(Math.random() * 1000000)}-${file.name}`;
+
+    //upload csv to aws s3 and send post to lamda function
+    const s3Response = await uploadToS3(fileId, fileContent);
+
+    console.debug('S3 response', s3Response);
+
+    //check if s3 response is successful
+    if (!s3Response.$metadata.httpStatusCode || s3Response.$metadata.httpStatusCode !== 200) {
+      return NextResponse.json(
+        { error: 'Upload to S3 failed' },
+        { status: 500 }
+      );
+    }
+
+    const lambdaResponse = await invokeProcessCSV(jobId, process.env.AWS_BUCKET_NAME as string, fileId, user.id, accountId);
+
+    console.debug('Lambda function invoked', lambdaResponse);
+
+    // check if lambda function is successful
+    if (!lambdaResponse.$metadata.httpStatusCode || lambdaResponse.$metadata.httpStatusCode !== 200) {
+      return NextResponse.json(
+        { error: 'Upload to S3 and invoke Lambda function failed' },
+        { status: 500 }
+      );
+    }
+
     // Return success immediately
     return NextResponse.json({
       message: 'Upload started successfully',

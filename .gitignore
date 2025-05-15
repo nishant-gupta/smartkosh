@@ -40,3 +40,11 @@ next-env.d.ts
 /features/*.png 
 
 db-scripts.txt
+
+dist/*
+.env
+.env.development.local
+.env.test.local
+.env.production
+
+.env.local

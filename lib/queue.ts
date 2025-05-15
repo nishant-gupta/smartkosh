@@ -1,4 +1,4 @@
-import Queue, { Job } from 'bull';
+import Bull from 'bull';
 import { prisma } from './prisma';
 import { parse } from 'csv-parse/sync';
 
@@ -6,7 +6,7 @@ import { parse } from 'csv-parse/sync';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Create upload queue
-export const uploadQueue = new Queue('csv-uploads', REDIS_URL, {
+export const uploadQueue = new Bull('csv-uploads', REDIS_URL, {
   defaultJobOptions: {
     attempts: 3, // Retry up to 3 times
     backoff: {
@@ -15,6 +15,16 @@ export const uploadQueue = new Queue('csv-uploads', REDIS_URL, {
     },
     removeOnComplete: true, // Remove jobs when complete to save Redis memory
     timeout: 300000, // 5 minutes timeout
+  }
+});
+
+// Create financial summary queue
+export const financialSummaryQueue = new Bull('financial-summary', REDIS_URL, {
+  defaultJobOptions: {
+    removeOnComplete: true,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    timeout: 300000,
   }
 });
 
@@ -81,13 +91,13 @@ function parseCSV(content: string) {
 }
 
 // Process upload jobs
-uploadQueue.process(async (job: Job) => {
+uploadQueue.process(async (job: Bull.Job) => {
   const { clientJobId, fileContent, userId, fileName } = job.data;
   console.log(`[Queue] Starting processing for job ${clientJobId}`);
-  
+  let dbJob: any = null; // Declare dbJob in the outer scope
   try {
     // Create a database record for this job now that we're in the worker
-    const dbJob = await prisma.backgroundJob.create({
+    dbJob = await prisma.backgroundJob.create({
       data: {
         userId: userId,
         type: 'transaction_upload',
@@ -99,7 +109,7 @@ uploadQueue.process(async (job: Job) => {
           queueJobId: job.id
         }
       }
-    }).catch(err => {
+    }).catch((err: Error) => {
       console.error('Failed to create DB job record:', err);
       return null;
     });
@@ -135,7 +145,7 @@ uploadQueue.process(async (job: Job) => {
         type: 'info',
         relatedTo: 'transaction_upload'
       }
-    }).catch(err => console.error('Failed to create notification:', err));
+    }).catch((err: Error) => console.error('Failed to create notification:', err));
     
     // Update job progress
     if (dbJob) {
@@ -144,7 +154,7 @@ uploadQueue.process(async (job: Job) => {
         data: {
           progress: 10
         }
-      }).catch(err => console.error('Failed to update job progress:', err));
+      }).catch((err: Error) => console.error('Failed to update job progress:', err));
     }
     
     // Parse the CSV data
@@ -159,7 +169,7 @@ uploadQueue.process(async (job: Job) => {
         data: {
           progress: 20
         }
-      }).catch(err => console.error('Failed to update job progress:', err));
+      }).catch((err: Error) => console.error('Failed to update job progress:', err));
     }
     
     // Process transactions in smaller batches to prevent timeout issues
@@ -195,7 +205,7 @@ uploadQueue.process(async (job: Job) => {
         data: {
           progress: 30
         }
-      }).catch(err => console.error('Failed to update job progress:', err));
+      }).catch((err: Error) => console.error('Failed to update job progress:', err));
     }
     
     // Process each batch in a separate transaction
@@ -252,7 +262,7 @@ uploadQueue.process(async (job: Job) => {
             data: {
               progress: progressPercentage
             }
-          }).catch(err => console.error('Failed to update job progress:', err));
+          }).catch((err: Error) => console.error('Failed to update job progress:', err));
         }
         
         console.log(`[Queue] Batch ${batchIndex + 1} completed for job ${jobId}. Created ${result.length} transactions.`);
@@ -268,7 +278,7 @@ uploadQueue.process(async (job: Job) => {
                 type: 'info',
                 relatedTo: 'transaction_upload'
               }
-            }).catch(err => console.error('Failed to create notification:', err));
+            }).catch((err: Error) => console.error('Failed to create notification:', err));
           }
         }
       } catch (error: any) {
@@ -282,7 +292,7 @@ uploadQueue.process(async (job: Job) => {
               status: 'failed',
               error: `Error processing batch ${batchIndex + 1}: ${error.message}`
             }
-          }).catch(err => console.error('Failed to update job status:', err));
+          }).catch((err: Error) => console.error('Failed to update job status:', err));
         }
         
         // Create notification for the error
@@ -295,7 +305,7 @@ uploadQueue.process(async (job: Job) => {
               type: 'error',
               relatedTo: 'transaction_upload'
             }
-          }).catch(err => console.error('Failed to create notification:', err));
+          }).catch((err: Error) => console.error('Failed to create notification:', err));
         }
         
         throw error; // Rethrow to trigger Bull's retry mechanism if applicable
@@ -311,7 +321,7 @@ uploadQueue.process(async (job: Job) => {
           data: {
             progress: 90
           }
-        }).catch(err => console.error('Failed to update job progress:', err));
+        }).catch((err: Error) => console.error('Failed to update job progress:', err));
       }
       await prisma.account.update({
         where: { id: accountId },
@@ -333,7 +343,7 @@ uploadQueue.process(async (job: Job) => {
               accountUpdateFailed: true
             }
           }
-        }).catch(err => console.error('Failed to update job status:', err));
+        }).catch((err: Error) => console.error('Failed to update job status:', err));
       }
       
       // Create notification for partial success
@@ -346,7 +356,7 @@ uploadQueue.process(async (job: Job) => {
             type: 'warning',
             relatedTo: 'transaction_upload'
           }
-        }).catch(err => console.error('Failed to create notification:', err));
+        }).catch((err: Error) => console.error('Failed to create notification:', err));
       }
       
       return { status: 'partial_success', transactionsCreated: totalCreated };
@@ -365,7 +375,7 @@ uploadQueue.process(async (job: Job) => {
             finalBalance: newBalance
           }
         }
-      }).catch(err => console.error('Failed to update job status:', err));
+      }).catch((err: Error) => console.error('Failed to update job status:', err));
     }
     
     // Create success notification only if there were transactions to create
@@ -378,7 +388,7 @@ uploadQueue.process(async (job: Job) => {
           type: 'info',
           relatedTo: 'transaction_upload'
         }
-      }).catch(err => console.error('Failed to create notification:', err));
+      }).catch((err: Error) => console.error('Failed to create notification:', err));
     }
 
     // Update account balance
@@ -390,7 +400,7 @@ uploadQueue.process(async (job: Job) => {
         type: 'info',
         relatedTo: 'account_balance'
       }
-    }).catch(err => console.error('Failed to create notification:', err));
+    }).catch((err: Error) => console.error('Failed to create notification:', err));
     
     console.log(`[Queue] Upload job ${jobId} completed successfully. Created ${totalCreated} transactions`);
     return { status: 'success', transactionsCreated: totalCreated };
@@ -426,12 +436,12 @@ uploadQueue.process(async (job: Job) => {
 });
 
 // Listen for completed events
-uploadQueue.on('completed', (job: Job, result: any) => {
+uploadQueue.on('completed', (job: Bull.Job, result: any) => {
   console.log(`[Queue] Job ${job.id} completed with result:`, result);
 });
 
 // Listen for failed events
-uploadQueue.on('failed', (job: Job, error: Error) => {
+uploadQueue.on('failed', (job: Bull.Job, error: Error) => {
   console.error(`[Queue] Job ${job.id} failed with error:`, error.message);
 });
 
