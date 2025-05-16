@@ -305,7 +305,7 @@ export async function POST(req: Request) {
     });
 
     // trigger financial summary lambda function
-    await triggerFinancialSummaryLambda(actualUserId, accountId);
+    triggerFinancialSummaryLambda(actualUserId, accountId);
     
     console.log("Account balance updated successfully");
     

@@ -291,7 +291,7 @@ export async function PUT(
       });
 
       // trigger financial summary lambda function
-      await triggerFinancialSummaryLambda(actualUserId, accountId);
+      triggerFinancialSummaryLambda(actualUserId, accountId);
       
       return updatedTransaction;
     });
@@ -407,7 +407,7 @@ export async function DELETE(
       });
 
       // trigger financial summary lambda function
-      await triggerFinancialSummaryLambda(actualUserId, transaction.accountId);
+      triggerFinancialSummaryLambda(actualUserId, transaction.accountId);
       
       console.log("Transaction deleted successfully");
     });
