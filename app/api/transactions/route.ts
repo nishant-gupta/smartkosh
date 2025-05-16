@@ -2,6 +2,36 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 
+import { invokeProcessFinancialSummary } from "@/lib/aws/lambda";
+
+async function triggerFinancialSummaryLambda(userId: string, accountId: string) {
+  const jobId = `job-summary-${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+  await prisma.$executeRaw`
+    INSERT INTO "BackgroundJob" (
+      id,
+      "userId",
+      "type",
+      "status",
+      "progress",
+      "createdAt",
+      "updatedAt"
+    )
+    VALUES (
+      ${jobId},
+      ${userId},
+      'financial_summary',
+      'pending',
+      0,
+      NOW(),
+      NOW()
+    )
+  `;
+
+  const lambdaResponse = await invokeProcessFinancialSummary(jobId, userId, accountId);
+
+  console.log('Lambda response', lambdaResponse);
+}
+
 // Get all transactions for the current user
 export async function GET(req: Request) {
   try {
@@ -273,6 +303,9 @@ export async function POST(req: Request) {
         },
       },
     });
+
+    // trigger financial summary lambda function
+    await triggerFinancialSummaryLambda(actualUserId, accountId);
     
     console.log("Account balance updated successfully");
     
