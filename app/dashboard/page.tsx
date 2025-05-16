@@ -431,6 +431,30 @@ export default function Dashboard() {
     setIsTransactionModalOpen(true);
   };
 
+  // Delete transaction handler for the list
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (!transaction?.id) return;
+    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+
+    try {
+      const response = await fetch(`/api/transactions/${transaction.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete transaction');
+      }
+
+      // Refresh dashboard data (accounts, transactions, etc.)
+      fetchAccounts();
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      alert('Failed to delete transaction. Please try again.');
+      console.error('Error deleting transaction:', error);
+    }
+  };
+
   const handleCloseTransactionModal = () => {
     setIsTransactionModalOpen(false);
   };
@@ -503,37 +527,6 @@ export default function Dashboard() {
   return (
     <PageLayout title="Dashboard">
       <div>
-        {/* Header */}
-        {/* <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
-          <div className="flex justify-between items-center px-4 py-3">
-            <div className="flex items-center">
-              <h1 className="text-lg md:text-xl font-semibold">Dashboard</h1>
-            </div>
-            
-            <div className="flex space-x-4">
-              <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-              <button className="p-2 text-gray-700 hover:bg-gray-100 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </button>
-              <button 
-                className="bg-gray-900 text-white px-4 py-2 rounded-md flex items-center space-x-2"
-                onClick={handleOpenAddTransactionModal}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="hidden sm:inline">Add Transaction</span>
-              </button>
-            </div>
-          </div>
-        </div> */}
-        
         {/* Financial summary cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6 mt-6">
           <SummaryCard 
@@ -930,7 +923,12 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="divide-y">
-              <TransactionsList limit={5} onEdit={handleEditTransaction} refreshTrigger={refreshTrigger} />
+              <TransactionsList
+                limit={5}
+                onEdit={handleEditTransaction}
+                onDelete={handleDeleteTransaction}
+                refreshTrigger={refreshTrigger}
+              />
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm">

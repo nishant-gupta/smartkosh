@@ -37,7 +37,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
       >
         <div className="flex items-center space-x-2 mb-8">
           <span className="bg-white text-gray-900 p-1 rounded-md">
-            {getIcon('bank', { className: 'h-5 w-5 invert' })}
+            {getIcon('bank', { className: 'h-5 w-5' })}
           </span>
           <span className="font-bold">SmartKosh</span>
         </div>
@@ -48,8 +48,8 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
         
         <nav className="flex-1 space-y-1">
           <NavItem href="/profile/basic" isActive={pathname === '/profile' || pathname === '/profile/basic'}>Basic Info</NavItem>
-          <NavItem href="/profile/financial">Financial Info</NavItem>
-          <NavItem href="/profile/accounts">Linked Accounts</NavItem>
+          <NavItem href="/profile/financial" isActive={pathname === '/profile/financial'}>Financial Info</NavItem>
+          <NavItem href="/profile/accounts" isActive={pathname === '/profile/accounts'}>Linked Accounts</NavItem>
           <NavItem href="/profile/notifications" isActive={pathname?.startsWith('/profile/notifications')}>
             <div className="flex items-center justify-between w-full">
               <span>Notifications</span>

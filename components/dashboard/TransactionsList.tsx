@@ -20,6 +20,7 @@ interface TransactionItemProps {
   isNegative: boolean
   transaction?: Transaction
   onEdit?: (transaction: Transaction) => void
+  onDelete?: (transaction: Transaction) => void
 }
 
 function TransactionItem({ 
@@ -29,7 +30,8 @@ function TransactionItem({
   amount, 
   isNegative = false,
   transaction,
-  onEdit 
+  onEdit,
+  onDelete
 }: TransactionItemProps) {
   return (
     <div className="flex items-center justify-between py-3">
@@ -54,6 +56,14 @@ function TransactionItem({
             {getIcon('edit', { className: 'h-4 w-4' })}
           </button>
         )}
+        {transaction && onDelete && (
+          <button 
+            onClick={() => onDelete(transaction)}
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+          >
+            {getIcon('delete', { className: 'h-4 w-4' })}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -62,10 +72,11 @@ function TransactionItem({
 interface TransactionsListProps {
   limit?: number
   onEdit?: (transaction: Transaction) => void
+  onDelete?: (transaction: Transaction) => void
   refreshTrigger?: number
 }
 
-export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0 }: TransactionsListProps): JSX.Element {
+export default function TransactionsList({ limit = 5, onEdit, onDelete, refreshTrigger = 0 }: TransactionsListProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(true)
   const [transactions, setTransactions] = useState<Transaction[]>([])
 
@@ -99,7 +110,7 @@ export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0
   }
 
   return (
-    <div className="py-2">
+    <div className="p-4">
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <div className="w-8 h-8 border-t-2 border-gray-800 rounded-full animate-spin"></div>
@@ -118,17 +129,11 @@ export default function TransactionsList({ limit = 5, onEdit, refreshTrigger = 0
               isNegative={transaction.amount < 0}
               transaction={transaction}
               onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
         </div>
       )}
-      <button
-        onClick={() => {}}
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-      >
-        {getIcon('plus', { className: 'h-5 w-5' })}
-        <span className="ml-2">Add Transaction</span>
-      </button>
     </div>
   )
 }
