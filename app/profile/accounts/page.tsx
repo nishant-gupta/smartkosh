@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { getIcon } from '@/utils/icons'
 
 interface Account {
   id: string
@@ -251,18 +252,14 @@ export default function AccountsPage() {
             onClick={() => setShowAddModal(true)} 
             className="px-3 py-1.5 bg-gray-100 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-200"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
+            {getIcon('add', { className: 'h-4 w-4 mr-1' })}
             Add Manual Account
           </button>
           <button 
             onClick={() => setShowLinkModal(true)} 
             className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
+            {getIcon('add', { className: 'h-4 w-4 mr-1 invert' })}
             Link New Account
           </button>
         </div>
@@ -271,9 +268,7 @@ export default function AccountsPage() {
       {accounts.length === 0 ? (
         <div className="bg-gray-50 p-8 rounded-lg text-center">
           <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
+            {getIcon('bank', { className: 'h-8 w-8 text-gray-400' })}
           </div>
           <h3 className="text-lg font-medium mb-2">No Accounts Linked</h3>
           <p className="text-gray-500 mb-4">Link your bank and credit card accounts to start tracking your finances.</p>
@@ -289,9 +284,7 @@ export default function AccountsPage() {
           {/* Secure connection notice */}
           <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
             <div className="flex items-start">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+              {getIcon('secure', { className: 'h-6 w-6 text-gray-700 mr-3 mt-0.5' })}
               <div>
                 <h3 className="font-medium mb-1">Secure Account Connection</h3>
                 <p className="text-sm text-gray-600">We partner with Plaid to securely connect your accounts. Your bank login details are never stored by us.</p>
@@ -310,15 +303,9 @@ export default function AccountsPage() {
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-gray-900 rounded-md flex items-center justify-center text-white mr-3">
                         {account.type === 'bank' ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                            <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                          </svg>
+                          getIcon('bank', { className: 'h-5 w-5 invert' })
                         ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                            <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                          </svg>
+                          getIcon('bank', { className: 'h-5 w-5 invert' })
                         )}
                       </div>
                       <div>
@@ -331,9 +318,7 @@ export default function AccountsPage() {
                         onClick={() => handleDeleteAccount(account.id)}
                         className="text-gray-400 hover:text-red-500 p-1"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+                        {getIcon('delete', { className: 'h-5 w-5' })}
                       </button>
                     </div>
                   </div>
@@ -359,9 +344,7 @@ export default function AccountsPage() {
                           <div className="text-sm">Credit Card ****9012</div>
                           {account.status === 'needs_attention' ? (
                             <div className="text-sm font-medium text-orange-500 flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
+                              {getIcon('warning', { className: 'h-4 w-4 mr-1' })}
                               Re-authenticate
                             </div>
                           ) : (
@@ -391,9 +374,7 @@ export default function AccountsPage() {
                   <label htmlFor="bank" className="block text-sm font-medium text-gray-700 mb-1">Search for your bank</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
+                      {getIcon('search', { className: 'h-5 w-5 text-gray-400' })}
                     </div>
                     <input
                       type="text"
@@ -412,10 +393,7 @@ export default function AccountsPage() {
                     onClick={() => setSelectedBank('Chase')}
                   >
                     <div className="w-10 h-10 bg-gray-900 rounded-md flex items-center justify-center text-white mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                        <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                      </svg>
+                      {getIcon('bank', { className: 'h-5 w-5' })}
                     </div>
                     <span className="text-sm">Chase</span>
                   </div>
@@ -425,10 +403,7 @@ export default function AccountsPage() {
                     onClick={() => setSelectedBank('Bank of America')}
                   >
                     <div className="w-10 h-10 bg-gray-900 rounded-md flex items-center justify-center text-white mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                        <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                      </svg>
+                      {getIcon('bank', { className: 'h-5 w-5' })}
                     </div>
                     <span className="text-sm">Bank of America</span>
                   </div>
@@ -438,10 +413,7 @@ export default function AccountsPage() {
                     onClick={() => setSelectedBank('American Express')}
                   >
                     <div className="w-10 h-10 bg-gray-900 rounded-md flex items-center justify-center text-white mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                        <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                      </svg>
+                      {getIcon('bank', { className: 'h-5 w-5' })}
                     </div>
                     <span className="text-sm">American Express</span>
                   </div>
@@ -592,9 +564,7 @@ export default function AccountsPage() {
           <div className="bg-white rounded-lg max-w-md w-full overflow-hidden">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+                {getIcon('check', { className: 'h-8 w-8 text-white' })}
               </div>
               <h2 className="text-xl font-semibold mb-2">Account Linked Successfully!</h2>
               <p className="text-gray-600 mb-6">We are now fetching your initial transaction history. This may take a few minutes.</p>
@@ -602,10 +572,7 @@ export default function AccountsPage() {
               <div className="flex flex-col items-center">
                 <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-4">
                   <div className="w-10 h-10 bg-gray-900 rounded-md flex items-center justify-center text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                      <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                    </svg>
+                    {getIcon('bank', { className: 'h-5 w-5' })}
                   </div>
                 </div>
                 <div className="text-lg font-medium mb-6">{newLinkedAccount?.name || selectedBank}</div>

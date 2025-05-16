@@ -7,6 +7,7 @@ import Link from 'next/link'
 import TransactionModal from '@/components/TransactionModal'
 import TransactionsList from '@/components/dashboard/TransactionsList'
 import PageLayout from '@/components/PageLayout'
+import { getIcon, getNavIcon, getTransactionIcon } from '@/utils/icons'
 
 // We'll use inline SVGs instead of heroicons
 // Icons
@@ -68,13 +69,12 @@ interface QuickActionProps {
 
 interface Transaction {
   id: string;
-  accountId: string;
   amount: number;
-  description: string;
   category: string;
   date: string;
+  description: string;
   type: 'income' | 'expense' | 'saving' | 'transfer';
-  notes?: string;
+  accountId: string;
 }
 
 // Update the FinancialSummary type to include category
@@ -541,11 +541,7 @@ export default function Dashboard() {
             amount={formatCurrency(financialSummary.income.amount)} 
             trend={financialSummary.income.trend.toString() + '%'} 
             period={`vs last ${activeTab}`} 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            } 
+            icon={getIcon('arrow-up', { className: 'w-5 h-5 text-green-600' })}
           />
           <SummaryCard 
             title="TOTAL EXPENSES" 
@@ -553,22 +549,14 @@ export default function Dashboard() {
             trend={financialSummary.expenses.trend.toString() + '%'}
             trendColor={financialSummary.expenses.trend > 0 ? "text-red-600" : "text-green-600"}
             period={`vs last ${activeTab}`} 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            } 
+            icon={getIcon('arrow-down', { className: 'w-5 h-5 text-red-600' })}
           />
           <SummaryCard 
             title="TOTAL SAVINGS" 
             amount={formatCurrency(financialSummary.savings.amount)} 
             trend={financialSummary.savings.trend.toString() + '%'} 
             period={`vs last ${activeTab}`} 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            } 
+            icon={getIcon('savings', { className: 'w-5 h-5 text-blue-600' })}
           />
           <SummaryCard 
             title="NET FLOW" 
@@ -576,11 +564,7 @@ export default function Dashboard() {
             trend={financialSummary.netFlow.trend.toString() + '%'}
             trendColor={financialSummary.netFlow.amount >= 0 ? "text-green-600" : "text-red-600"}
             period={`vs last ${activeTab}`} 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-              </svg>
-            } 
+            icon={getIcon('net-flow', { className: 'w-5 h-5 text-purple-600' })}
           />
         </div>
         
@@ -915,9 +899,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="font-semibold">AI Insights</h2>
               <button className="text-gray-400 hover:text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                {getIcon('refresh', { className: 'h-5 w-5' })}
               </button>
             </div>
             <div className="p-4 space-y-4">
@@ -957,38 +939,22 @@ export default function Dashboard() {
             </div>
             <div className="p-4 space-y-4">
               <QuickAction 
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                }
+                icon={getIcon('add', { className: 'w-5 h-5 invert' })}
                 title="Add Transaction"
                 onClick={handleOpenAddTransactionModal}
               />
               <QuickAction 
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                }
+                icon={getIcon('upload', { className: 'w-5 h-5 invert' })}
                 title="Upload Statement"
                 href="/transactions/upload"
               />
               <QuickAction 
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                }
+                icon={getIcon('budget', { className: 'w-5 h-5 invert' })}
                 title="Set Budget Goal"
                 href="/budget/goals"
               />
               <QuickAction 
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                }
+                icon={getIcon('export', { className: 'w-5 h-5 invert' })}
                 title="Export Report"
                 href="/reports/export"
               />
@@ -1012,44 +978,9 @@ export default function Dashboard() {
 }
 
 function NavItem({ children, href, icon, isActive = false }: NavItemProps) {
-  // Define icons with proper types
-  const icons: { [key: string]: JSX.Element } = {
-    dashboard: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-    transactions: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-    analytics: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-    budget: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    ),
-    insights: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    settings: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    )
-  }
-  
   return (
     <Link href={href} className={`flex items-center space-x-3 px-3 py-2 rounded-md ${isActive ? 'bg-gray-800' : 'hover:bg-gray-800'}`}>
-      <span>{icons[icon]}</span>
+      <span>{getNavIcon(icon)}</span>
       <span>{children}</span>
     </Link>
   )
@@ -1102,7 +1033,6 @@ function InsightItem({ icon, text }: InsightItemProps) {
 }
 
 function TransactionItem({ 
-  icon, 
   name, 
   date, 
   amount, 
@@ -1114,7 +1044,7 @@ function TransactionItem({
     <div className="flex items-center justify-between py-3">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-          {icon}
+          {transaction?.category ? getTransactionIcon(transaction.category) : getIcon('other', { className: 'w-5 h-5' })}
         </div>
         <div>
           <p className="text-sm font-medium text-gray-900">{name}</p>
@@ -1131,10 +1061,7 @@ function TransactionItem({
               onClick={() => onEdit(transaction)}
               className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-edit">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
+              {getIcon('edit', { className: 'w-4 h-4' })}
             </button>
             <button 
               onClick={() => {
@@ -1144,7 +1071,6 @@ function TransactionItem({
                   })
                   .then(response => {
                     if (response.ok) {
-                      // You would typically refresh your transactions list here
                       window.location.reload();
                     } else {
                       alert('Failed to delete transaction');
@@ -1158,24 +1084,19 @@ function TransactionItem({
               }}
               className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-trash-2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"></path>
-                <line x1="10" y1="11" x2="10" y2="17"></line>
-                <line x1="14" y1="11" x2="14" y2="17"></line>
-              </svg>
+              {getIcon('delete', { className: 'w-4 h-4' })}
             </button>
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 function QuickAction({ icon, title, href, onClick }: QuickActionProps & { onClick?: () => void }) {
   const content = (
     <>
-      <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
+      <div className="bg-gray-900 p-3 rounded-full text-indigo-600">
         {icon}
       </div>
       <div className="font-medium">{title}</div>
@@ -1228,34 +1149,4 @@ function formatAmount(amount: number, type: string): string {
   } else {
     return `-${formatter.format(amount)}`;
   }
-}
-
-function getTransactionIcon(category: string): JSX.Element {
-  const renderIcon = (pathElement: JSX.Element) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      {pathElement}
-    </svg>
-  );
-  
-  const categoryIcons: Record<string, JSX.Element> = {
-    'Food & Dining': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3z M7 7h.01M7 12h.01M7 17h.01M12 7h.01M12 12h.01M12 17h.01M17 7h.01M17 12h.01M17 17h.01" />),
-    'Groceries': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />),
-    'Housing': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />),
-    'Transportation': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m0 0v8m0-8l-8 8m4-8v8" />),
-    'Entertainment': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2z" />),
-    'Bills & Utilities': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />),
-    'Shopping': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />),
-    'Health & Medical': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 12.5l7.5-7.5 7.5 7.5m-15 6l7.5-7.5 7.5 7.5" />),
-    'Personal Care': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.5 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM15.5 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />),
-    'Education': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />),
-    'Travel': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />),
-    'Investments': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />),
-    'Salary': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />),
-    'Business': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />),
-    'Gifts & Donations': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112.83 1.83l-2.83 2.83m0-8a2 2 0 100 4 2 2 0 000-4zm0 0l-8 6h16l-8-6z" />),
-    'Income': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />),
-    'Other': renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />)
-  };
-  
-  return categoryIcons[category] || renderIcon(<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />);
 }

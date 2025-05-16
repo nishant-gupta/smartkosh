@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { getIcon } from '@/utils/icons'
 
 export default function Register() {
   const router = useRouter()
@@ -51,9 +52,7 @@ export default function Register() {
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-sm">
         <div className="text-center">
           <div className="inline-flex justify-center items-center w-12 h-12 bg-gray-900 text-white rounded mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
+            {getIcon('user-add', { className: 'w-6 h-6 invert' })}
           </div>
           <h1 className="text-2xl font-bold">Create an account</h1>
           <p className="mt-2 text-gray-600">Join SmartKosh to manage your finances</p>

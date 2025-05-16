@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { getIcon } from '@/utils/icons'
 
 export default function Login() {
   const router = useRouter()
@@ -60,9 +61,7 @@ export default function Login() {
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-sm">
         <div className="text-center">
           <div className="inline-flex justify-center items-center w-12 h-12 bg-gray-900 text-white rounded mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
+            {getIcon('logo', { className: 'w-6 h-6 invert' })}
           </div>
           <h1 className="text-2xl font-bold">Welcome back</h1>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
@@ -151,21 +150,14 @@ export default function Login() {
             onClick={() => handleSocialLogin('google')}
             className="flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
           >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-              <path
-                d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C7.021 2 2.543 6.477 2.543 12s4.478 10 10.002 10c8.396 0 10.249-7.85 9.426-11.748l-9.426-.013z"
-                fill="currentColor"
-              />
-            </svg>
+            {getIcon('google', { className: 'w-5 h-5 mr-2' })}
             Google
           </button>
           <button
             onClick={() => handleSocialLogin('apple')}
             className="flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
           >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701z" />
-            </svg>
+            {getIcon('apple', { className: 'w-5 h-5 mr-2' })}
             Apple
           </button>
         </div>

@@ -2,6 +2,21 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { getNotificationIcon, getIcon } from '@/utils/icons'
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO'
+  read: boolean
+  date: string
+  relatedTo?: string
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleString()
+}
 
 // Create a client component that uses search params
 function NotificationsContent() {
@@ -124,66 +139,17 @@ function NotificationsContent() {
         </div>
       ) : notifications.length > 0 ? (
         <>
-          <div className="bg-white rounded-lg shadow">
+          <div className="space-y-4">
             {notifications.map(notification => (
-              <div 
-                key={notification.id}
-                className={`p-5 border-b border-gray-100 ${!notification.read ? 'bg-blue-50' : ''}`}
-              >
+              <div key={notification.id} className="bg-white shadow rounded-lg p-4">
                 <div className="flex items-start">
-                  {/* Icon based on notification type */}
-                  <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
-                    notification.type === 'SUCCESS' ? 'bg-green-100 text-green-500' :
-                    notification.type === 'WARNING' ? 'bg-yellow-100 text-yellow-500' :
-                    notification.type === 'ERROR' ? 'bg-red-100 text-red-500' :
-                    'bg-blue-100 text-blue-500'
-                  }`}>
-                    {notification.type === 'SUCCESS' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    ) : notification.type === 'WARNING' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    ) : notification.type === 'ERROR' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    )}
+                  <div className="flex-shrink-0">
+                    {getNotificationIcon(notification.type)}
                   </div>
-                  
-                  <div className="ml-4 flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-base font-medium text-gray-900">{notification.title}</h3>
-                      <div className="flex space-x-2">
-                        <span className="text-xs text-gray-500">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </span>
-                        
-                        {!notification.read && (
-                          <button 
-                            onClick={() => markAsRead(notification.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            Mark as read
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                    
-                    {notification.relatedTo && (
-                      <div className="mt-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {notification.relatedTo}
-                        </span>
-                      </div>
-                    )}
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-gray-900">{notification.title}</h3>
+                    <p className="text-sm text-gray-500">{notification.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">{formatDate(notification.date)}</p>
                   </div>
                 </div>
               </div>
@@ -233,9 +199,7 @@ function NotificationsContent() {
                       }`}
                     >
                       <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                      </svg>
+                      {getIcon('chevron-left', { className: 'h-5 w-5' })}
                     </button>
                     
                     {/* Always show first page */}
@@ -310,9 +274,7 @@ function NotificationsContent() {
                       }`}
                     >
                       <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                      </svg>
+                      {getIcon('chevron-right', { className: 'h-5 w-5' })}
                     </button>
                   </nav>
                 </div>
@@ -322,20 +284,7 @@ function NotificationsContent() {
         </>
       ) : (
         <div className="bg-white p-8 rounded-lg text-center">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-12 w-12 mx-auto text-gray-400 mb-4" 
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" 
-            />
-          </svg>
+          {getIcon('bell', { className: 'h-12 w-12 mx-auto text-gray-400 mb-4' })}
           <h3 className="text-lg font-medium text-gray-900 mb-1">No notifications</h3>
           <p className="text-gray-500">You don't have any notifications yet.</p>
         </div>
@@ -356,17 +305,6 @@ function NotificationsLoading() {
       </div>
     </div>
   )
-}
-
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: string
-  read: boolean
-  createdAt: string
-  relatedTo?: string
-  data?: any
 }
 
 // Main page component with Suspense

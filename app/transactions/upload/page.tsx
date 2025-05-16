@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import PageLayout from '@/components/PageLayout'
+import { getIcon } from '@/utils/icons'
 
 export default function UploadStatementPage() {
   const [isDragging, setIsDragging] = useState(false)
@@ -154,20 +155,9 @@ export default function UploadStatementPage() {
           >
             {!file ? (
               <>
-                <svg 
-                  className="w-12 h-12 text-gray-400 mb-4" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" 
-                  />
-                </svg>
+                <div className="text-gray-400">
+                  {getIcon('upload-cloud-gray', { className: 'w-12 h-12 mb-4' })}
+                </div>
                 <p className="text-xl font-medium mb-2">Drag and drop your statement file</p>
                 <p className="text-gray-500 mb-4">or</p>
                 <button
@@ -181,20 +171,7 @@ export default function UploadStatementPage() {
               </>
             ) : (
               <>
-                <svg 
-                  className="w-12 h-12 text-green-500 mb-4" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
-                  />
-                </svg>
+                {getIcon('check-circle', { className: 'w-12 h-12 text-green-500 mb-4' })}
                 <p className="text-xl font-medium mb-2">File selected</p>
                 <p className="text-gray-600 mb-4">{file.name}</p>
                 <div className="flex space-x-3">

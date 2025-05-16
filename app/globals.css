@@ -37,6 +37,10 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+.invert {
+  filter: invert(1) brightness(2);
+} 
+
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
