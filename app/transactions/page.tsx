@@ -537,7 +537,7 @@ export default function TransactionsPage() {
         {/* Header with upload and add buttons */}
         <div className="flex justify-between items-center mb-4">
           <div></div> {/* Empty div for spacing */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-4 mt-4">
             <button
               onClick={handleExportTransactions}
               className="bg-gray-700 text-white px-4 py-2 rounded-md flex items-center space-x-2"

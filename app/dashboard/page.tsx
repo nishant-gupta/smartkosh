@@ -535,7 +535,7 @@ export default function Dashboard() {
         </div> */}
         
         {/* Financial summary cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 mb-6 mt-6">
           <SummaryCard 
             title="TOTAL INCOME" 
             amount={formatCurrency(financialSummary.income.amount)} 

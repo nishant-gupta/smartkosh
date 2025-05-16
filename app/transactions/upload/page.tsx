@@ -112,7 +112,7 @@ export default function UploadStatementPage() {
 
   return (
     <PageLayout title="Upload Statement">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto mt-6">
         {/* <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-semibold">Upload Bank Statement</h1>
           <Link 
