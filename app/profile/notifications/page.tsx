@@ -11,6 +11,7 @@ interface Notification {
   type: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO'
   read: boolean
   date: string
+  createdAt: string
   relatedTo?: string
 }
 
@@ -205,123 +206,160 @@ function NotificationsContent() {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-between items-center border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-              <div className="flex flex-1 justify-between sm:hidden">
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4 rounded-lg shadow">
+              <div className="flex-1 flex justify-between sm:hidden">
                 <button
-                  onClick={() => goToPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
-                    currentPage === 1 ? 'text-gray-300' : 'text-gray-700 hover:bg-gray-50'
+                  onClick={() => goToPage(currentPage - 1)}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                    currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
-                    currentPage === totalPages ? 'text-gray-300' : 'text-gray-700 hover:bg-gray-50'
+                  onClick={() => goToPage(currentPage + 1)}
+                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+                    currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   Next
                 </button>
               </div>
-              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(currentPage * pageSize, totalCount)}</span> of{' '}
-                    <span className="font-medium">{totalCount}</span> results
+                    {totalCount > 0 ? (
+                      <>
+                        Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+                        <span className="font-medium">
+                          {Math.min(currentPage * pageSize, totalCount)}
+                        </span>{' '}
+                        of <span className="font-medium">{totalCount}</span> notifications
+                      </>
+                    ) : (
+                      'No notifications found'
+                    )}
                   </p>
                 </div>
                 <div>
-                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                     <button
-                      onClick={() => goToPage(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${
-                        currentPage === 1
-                          ? 'bg-white text-gray-300 cursor-not-allowed'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      onClick={() => goToPage(currentPage - 1)}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       <span className="sr-only">Previous</span>
-                      {getIcon('chevron-left', { className: 'h-5 w-5' })}
+                      {currentPage === 1 ? (
+                        getIcon('chevron-left-disabled', { className: 'h-5 w-5' })
+                      ) : (
+                        getIcon('chevron-left', { className: 'h-5 w-5' })
+                      )}
                     </button>
                     
-                    {/* Always show first page */}
-                    {currentPage > 3 && (
-                      <>
-                        <button
-                          onClick={() => goToPage(1)}
-                          className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 bg-white hover:bg-gray-50"
-                        >
-                          1
-                        </button>
-                        {currentPage > 4 && (
-                          <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 bg-white">
-                            ...
-                          </span>
-                        )}
-                      </>
-                    )}
-                    
                     {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                      // Display at most 5 page numbers centered around current page
-                      const pageNum = Math.max(
-                        1,
-                        Math.min(
-                          currentPage - Math.floor(Math.min(5, totalPages) / 2) + i,
-                          totalPages - Math.min(5, totalPages) + 1
-                        ) + i
-                      );
+                    {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+                      // Display page numbers with proper logic for handling up to 10 pages
+                      let pageToShow: number | null = null;
                       
-                      if (pageNum <= 0 || pageNum > totalPages) return null;
+                      if (totalPages <= 10) {
+                        // If 10 or fewer pages, show all
+                        pageToShow = i + 1;
+                      } else if (currentPage <= 5) {
+                        // Near the start
+                        if (i < 8) {
+                          pageToShow = i + 1;
+                        } else if (i === 8) {
+                          return (
+                            <span
+                              key="ellipsis-end"
+                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                            >
+                              ...
+                            </span>
+                          );
+                        } else {
+                          pageToShow = totalPages;
+                        }
+                      } else if (currentPage >= totalPages - 4) {
+                        // Near the end
+                        if (i === 0) {
+                          pageToShow = 1;
+                        } else if (i === 1) {
+                          return (
+                            <span
+                              key="ellipsis-start"
+                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                            >
+                              ...
+                            </span>
+                          );
+                        } else {
+                          pageToShow = totalPages - 9 + i;
+                        }
+                      } else {
+                        // In the middle
+                        if (i === 0) {
+                          pageToShow = 1;
+                        } else if (i === 1) {
+                          return (
+                            <span
+                              key="ellipsis-start"
+                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                            >
+                              ...
+                            </span>
+                          );
+                        } else if (i === 9) {
+                          pageToShow = totalPages;
+                        } else if (i === 8) {
+                          return (
+                            <span
+                              key="ellipsis-end"
+                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                            >
+                              ...
+                            </span>
+                          );
+                        } else {
+                          // Show 5 pages around current page
+                          pageToShow = currentPage - 3 + i;
+                        }
+                      }
+                      
+                      if (pageToShow === null) return null;
                       
                       return (
                         <button
-                          key={pageNum}
-                          onClick={() => goToPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                            currentPage === pageNum
-                              ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
-                              : 'text-gray-900 bg-white hover:bg-gray-50'
-                          }`}
+                          key={pageToShow}
+                          onClick={() => goToPage(pageToShow!)}
+                          className={`relative inline-flex items-center px-4 py-2 border ${
+                            currentPage === pageToShow
+                              ? 'bg-indigo-50 border-indigo-500 text-indigo-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          } text-sm font-medium`}
                         >
-                          {pageNum}
+                          {pageToShow}
                         </button>
                       );
                     })}
                     
-                    {/* Always show last page */}
-                    {currentPage < totalPages - 2 && (
-                      <>
-                        {currentPage < totalPages - 3 && (
-                          <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 bg-white">
-                            ...
-                          </span>
-                        )}
-                        <button
-                          onClick={() => goToPage(totalPages)}
-                          className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 bg-white hover:bg-gray-50"
-                        >
-                          {totalPages}
-                        </button>
-                      </>
-                    )}
-                    
                     <button
-                      onClick={() => goToPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${
-                        currentPage === totalPages
-                          ? 'bg-white text-gray-300 cursor-not-allowed'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                      onClick={() => goToPage(currentPage + 1)}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === totalPages ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'
                       }`}
                     >
                       <span className="sr-only">Next</span>
-                      {getIcon('chevron-right', { className: 'h-5 w-5' })}
+                      {currentPage === totalPages ? (
+                        getIcon('chevron-right-disabled', { className: 'h-5 w-5' })
+                      ) : (
+                        getIcon('chevron-right', { className: 'h-5 w-5' })
+                      )}
                     </button>
                   </nav>
                 </div>
