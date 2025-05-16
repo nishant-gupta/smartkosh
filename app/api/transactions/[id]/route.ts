@@ -3,6 +3,37 @@ import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { PrismaClient, Prisma } from "@prisma/client";
 
+// trigger financial summary lambda function
+import { invokeProcessFinancialSummary } from "@/lib/aws/lambda";
+
+async function triggerFinancialSummaryLambda(userId: string, accountId: string) {
+  const jobId = `job-summary-${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+  await prisma.$executeRaw`
+    INSERT INTO "BackgroundJob" (
+      id,
+      "userId",
+      "type",
+      "status",
+      "progress",
+      "createdAt",
+      "updatedAt"
+    )
+    VALUES (
+      ${jobId},
+      ${userId},
+      'financial_summary',
+      'pending',
+      0,
+      NOW(),
+      NOW()
+    )
+  `;
+
+  const lambdaResponse = await invokeProcessFinancialSummary(jobId, userId, accountId);
+
+  console.log('Lambda response', lambdaResponse);
+}
+
 // Get a single transaction by ID
 export async function GET(
   req: Request,
@@ -258,6 +289,9 @@ export async function PUT(
           }
         }
       });
+
+      // trigger financial summary lambda function
+      await triggerFinancialSummaryLambda(actualUserId, accountId);
       
       return updatedTransaction;
     });
@@ -371,6 +405,9 @@ export async function DELETE(
           id
         }
       });
+
+      // trigger financial summary lambda function
+      await triggerFinancialSummaryLambda(actualUserId, transaction.accountId);
       
       console.log("Transaction deleted successfully");
     });

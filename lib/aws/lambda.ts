@@ -30,3 +30,18 @@ export async function invokeProcessCSV(jobId: string, bucket: string, key: strin
     }),
   }));
 } 
+
+export async function invokeProcessFinancialSummary(jobId: string, userId: string, accountId: string) {
+  const lambdaClient = getLambdaClient();
+  
+  return lambdaClient.send(new InvokeCommand({
+    FunctionName: process.env.AWS_LAMBDA_SUMMARY_FN_NAME as string,
+    Payload: JSON.stringify({
+      jobId,
+      data: {
+        userId,
+        accountId,
+      }
+    }),
+  }));
+}
