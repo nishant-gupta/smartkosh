@@ -9,18 +9,6 @@ import TransactionsList from '@/components/dashboard/TransactionsList'
 import PageLayout from '@/components/PageLayout'
 import { getIcon, getNavIcon, getTransactionIcon } from '@/utils/icons'
 
-// We'll use inline SVGs instead of heroicons
-// Icons
-// import { 
-//   ArrowUpIcon, 
-//   ArrowDownIcon, 
-//   ScaleIcon,
-//   PlusIcon,
-//   ArrowUpOnSquareIcon,
-//   DocumentTextIcon,
-//   CogIcon
-// } from '@heroicons/react/24/outline'
-
 // Define interfaces for our component props
 interface NavItemProps {
   children: React.ReactNode;
@@ -431,28 +419,9 @@ export default function Dashboard() {
     setIsTransactionModalOpen(true);
   };
 
-  // Delete transaction handler for the list
-  const handleDeleteTransaction = async (transaction: Transaction) => {
-    if (!transaction?.id) return;
-    if (!window.confirm('Are you sure you want to delete this transaction?')) return;
-
-    try {
-      const response = await fetch(`/api/transactions/${transaction.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete transaction');
-      }
-
-      // Refresh dashboard data (accounts, transactions, etc.)
-      fetchAccounts();
-      setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-      alert('Failed to delete transaction. Please try again.');
-      console.error('Error deleting transaction:', error);
-    }
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    // open a modal to confirm the deletion
+    setSelectedTransaction(transaction);
   };
 
   const handleCloseTransactionModal = () => {
@@ -923,12 +892,7 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="divide-y">
-              <TransactionsList
-                limit={5}
-                onEdit={handleEditTransaction}
-                onDelete={handleDeleteTransaction}
-                refreshTrigger={refreshTrigger}
-              />
+              <TransactionsList limit={5} onEdit={handleEditTransaction} onDelete={handleDeleteTransaction} refreshTrigger={refreshTrigger} />
             </div>
           </div>
           <div className="bg-white rounded-lg shadow-sm">

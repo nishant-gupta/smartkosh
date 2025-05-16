@@ -145,7 +145,7 @@ export default function TransactionModal({
     if (transaction && mode === 'edit') {
       setFormData({
         accountId: transaction.accountId,
-        amount: transaction.amount.toString(),
+        amount: Math.abs(transaction.amount).toString(),
         description: transaction.description,
         category: transaction.category,
         date: new Date(transaction.date).toISOString().slice(0, 10),
@@ -377,7 +377,7 @@ export default function TransactionModal({
                   type="number"
                   id="amount"
                   name="amount"
-                  value={formData.amount}
+                  value={Math.abs(Number(formData.amount))}
                   onChange={handleChange}
                   placeholder="0"
                   min="1"

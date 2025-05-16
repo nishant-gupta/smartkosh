@@ -257,7 +257,7 @@ export async function PUT(
               id: accountId
             }
           },
-          amount: parseFloat(amount.toString()),
+          amount: (type === "expense" ? -1 : 1) * parseFloat(amount.toString()),
           description,
           category,
           date: new Date(date),
