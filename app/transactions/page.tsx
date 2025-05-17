@@ -362,8 +362,11 @@ export default function TransactionsPage() {
 
     //map categories to their labels from constants
     const category = allCategories.map(cat => {
-      const category = EXPENSE_CATEGORIES.find(c => c.name === cat) || SAVING_CATEGORIES.find(c => c.name === cat) || INCOME_CATEGORIES.find(c => c.name === cat);
-      return {name: category?.name || cat, label: category?.label || cat};
+      const category =
+        Object.values(EXPENSE_CATEGORIES).find((c: any) => c.name === cat) ||
+        Object.values(SAVING_CATEGORIES).find((c: any) => c.name === cat) ||
+        Object.values(INCOME_CATEGORIES).find((c: any) => c.name === cat);
+      return { name: category?.name || cat, label: category?.label || cat };
     });
 
     // return object with name and label along with 'all'
