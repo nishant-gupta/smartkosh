@@ -630,21 +630,21 @@ export default function TransactionsPage() {
           {/* Transactions Table - Desktop View */}
           <div className="bg-white rounded-lg shadow overflow-hidden hidden md:block">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-700">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Description
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Category
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
                     Amount
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -672,7 +672,7 @@ export default function TransactionsPage() {
                         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100" title={transaction.category}>
                           {getCategoryIcon(transaction.category)}
                         </span>
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-gray-400 pl-2">
                           {getCategoryLabel(transaction.category)}
                         </span>
                       </div>
@@ -732,10 +732,10 @@ export default function TransactionsPage() {
                 <div className="font-medium mb-1">{transaction.description}</div>
                 
                 <div className="flex items-center text-sm text-gray-700 mb-3">
-                  <span className="mr-2 text-lg">
+                  <span className="mr-2 text-lg flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
                     {getCategoryIcon(transaction.category)}
                   </span>
-                  <span>{transaction.category}</span>
+                  <span className="text-sm text-gray-400">{getCategoryLabel(transaction.category)}</span>
                 </div>
                 
                 {transaction.aiReviewNeeded && (
