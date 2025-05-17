@@ -1,6 +1,8 @@
 import { useState, useEffect, ReactNode } from 'react'
 import Link from 'next/link'
 import { getTransactionIcon, getIcon } from '@/utils/icons'
+import { TRANSACTION_TYPE } from '@/utils/constants'
+import { formatAmount, formatDate } from '@/utils/utils'
 
 interface Transaction {
   id: string
@@ -41,12 +43,12 @@ function TransactionItem({
         </div>
         <div>
           <p className="text-sm font-medium text-gray-900">{name}</p>
-          <p className="text-xs text-gray-500">{date}</p>
+          <p className="text-xs text-gray-500">{formatDate(date)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className={`text-sm font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-          {amount}
+        <span className={`text-sm font-medium ${isNegative ? (transaction?.type === TRANSACTION_TYPE.SAVING ? 'text-blue-600' : 'text-red-600') : (transaction?.type === TRANSACTION_TYPE.SAVING ? 'text-green-600' : 'text-blue-600')}`}>
+          {formatAmount(transaction?.amount || 0, transaction?.type || '')}
         </span>
         {transaction && onEdit && (
           <button 

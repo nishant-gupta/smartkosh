@@ -8,6 +8,7 @@ import TransactionModal from '@/components/TransactionModal'
 import PageLayout from '@/components/PageLayout'
 import { getIcon } from '@/utils/icons'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES, TRANSACTION_TYPE } from '@/utils/constants'
+import { formatAmount, formatDate } from '@/utils/utils'
 
 // Define NavItem props interface
 interface NavItemProps {
@@ -340,22 +341,6 @@ export default function TransactionsPage() {
     // fetchTransactions will be called due to the dependency in the useEffect
   }
   
-  // Helper functions
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
-  }
-  
-  const formatAmount = (amount: number, type: string): string => {
-    if (type === TRANSACTION_TYPE.INCOME) {
-      return `+₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
-    } else if (type === TRANSACTION_TYPE.SAVING) {
-      return `↗₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
-    } else {
-      return `-₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
-    }
-  }
-  
   // Get unique categories for filter
   const getUniqueCategories = () => {
     const allCategories = transactions.map(t => t.category);
@@ -684,7 +669,7 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="mr-2 text-xl" title={transaction.category}>
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100" title={transaction.category}>
                           {getCategoryIcon(transaction.category)}
                         </span>
                         <span className="text-sm text-gray-900">

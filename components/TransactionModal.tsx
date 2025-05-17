@@ -341,7 +341,7 @@ export default function TransactionModal({
                   type="number"
                   id="amount"
                   name="amount"
-                  value={Math.abs(Number(formData.amount))}
+                  value={Math.abs(Number(formData.amount)) || ''}
                   onChange={handleChange}
                   placeholder="0"
                   min="1"

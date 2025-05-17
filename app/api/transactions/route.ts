@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 
 import { invokeProcessFinancialSummary } from "@/lib/aws/lambda";
+import { TRANSACTION_TYPE } from "@/utils/constants";
 
 async function triggerFinancialSummaryLambda(userId: string, accountId: string) {
   const jobId = `job-summary-${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
@@ -264,7 +265,7 @@ export async function POST(req: Request) {
             id: accountId
           }
         },
-        amount: (type === "expense" ? -1 : 1) * parseFloat(amount.toString()),
+        amount: (type === TRANSACTION_TYPE.INCOME ? 1 : -1) * parseFloat(amount.toString()),
         description,
         category,
         date: new Date(date),
@@ -277,9 +278,9 @@ export async function POST(req: Request) {
     
     // Update account balance
     let balanceChange = transaction.amount;
-    if (transaction.type === "expense") {
+    if (transaction.type === TRANSACTION_TYPE.EXPENSE) {
       balanceChange = -balanceChange;
-    } else if (transaction.type === "saving") {
+    } else if (transaction.type === TRANSACTION_TYPE.SAVING) {
       // For savings transactions, we treat them as money moved or set aside
       // This approach might vary based on your app's financial model
       // Options:

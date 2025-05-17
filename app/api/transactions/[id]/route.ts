@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 
 // trigger financial summary lambda function
 import { invokeProcessFinancialSummary } from "@/lib/aws/lambda";
+import { TRANSACTION_TYPE } from "@/utils/constants";
 
 async function triggerFinancialSummaryLambda(userId: string, accountId: string) {
   const jobId = `job-summary-${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
@@ -226,9 +227,9 @@ export async function PUT(
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Reverse the effect of the old transaction on the account balance
       let oldBalanceChange = existingTransaction.amount;
-      if (existingTransaction.type === "expense") {
+      if (existingTransaction.type === TRANSACTION_TYPE.EXPENSE) {
         oldBalanceChange = -oldBalanceChange;
-      } else if (existingTransaction.type === "saving") {
+      } else if (existingTransaction.type === TRANSACTION_TYPE.SAVING) {
         // Consistent with our POST handler, treat savings like expenses
         oldBalanceChange = -oldBalanceChange;
       }
@@ -257,7 +258,7 @@ export async function PUT(
               id: accountId
             }
           },
-          amount: (type === "expense" ? -1 : 1) * parseFloat(amount.toString()),
+          amount: (type === TRANSACTION_TYPE.INCOME ? 1 : -1) * parseFloat(amount.toString()),
           description,
           category,
           date: new Date(date),
@@ -270,9 +271,9 @@ export async function PUT(
       
       // Apply the effect of the new transaction on the account balance
       let newBalanceChange = parseFloat(amount.toString());
-      if (type === "expense") {
+      if (type === TRANSACTION_TYPE.EXPENSE) {
         newBalanceChange = -newBalanceChange;
-      } else if (type === "saving") {
+      } else if (type === TRANSACTION_TYPE.SAVING) {
         // Consistent with our POST handler, treat savings like expenses
         newBalanceChange = -newBalanceChange;
       }
