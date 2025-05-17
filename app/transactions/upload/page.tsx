@@ -133,11 +133,6 @@ export default function UploadStatementPage() {
                     <CheckIcon className="h-5 w-5 mr-2" />
                     <span className="font-medium">{uploadStatus.message}</span>
                   </div>
-                  {uploadStatus.count && (
-                    <p className="mt-1">
-                      {uploadStatus.count} transactions have been imported.
-                    </p>
-                  )}
                 </>
               ) : (
                 <p>{uploadStatus.message}</p>

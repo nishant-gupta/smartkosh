@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Image from 'next/image';
-
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES } from './constants';
 interface IconProps {
   className?: string;
   size?: number;
@@ -26,29 +26,21 @@ export const getNavIcon = (name: string, props: IconProps = {}): ReactNode => {
 };
 
 // Transaction category icons
-export const getTransactionIcon = (category: string, props: IconProps = {}): ReactNode => {
-  const iconMap: { [key: string]: string } = {
-    'Food & Dining': 'food-dining',
-    'Groceries': 'groceries',
-    'Housing': 'housing',
-    'Transportation': 'transportation',
-    'Entertainment': 'entertainment',
-    'Bills & Utilities': 'bills-utilities',
-    'Shopping': 'shopping',
-    'Health & Medical': 'health-medical',
-    'Personal Care': 'personal-care',
-    'Education': 'education',
-    'Travel': 'travel',
-    'Investments': 'investments',
-    'Salary': 'salary',
-    'Business': 'business',
-    'Gifts & Donations': 'gifts-donations',
-    'Income': 'income',
-    'Other': 'other'
-  };
+export const getTransactionIcon = (categoryName: string, props: IconProps = {}): ReactNode => {
 
-  const iconName = iconMap[category] || 'other';
-  return getIcon(iconName, { ...props, className: `h-5 w-5 ${props.className || ''}` });
+  const allCategories = [
+    ...Object.values(EXPENSE_CATEGORIES),
+    ...Object.values(SAVING_CATEGORIES),
+    ...Object.values(INCOME_CATEGORIES),
+  ];
+
+  const category = allCategories.find(cat => cat.name === categoryName);
+
+  if (category) {
+    return getIcon(category.icon, { ...props, className: `h-5 w-5 ${props.className || ''}` });
+  }
+
+  return getIcon('other', { ...props, className: `h-5 w-5 ${props.className || ''}` });
 };
 
 // Notification icons

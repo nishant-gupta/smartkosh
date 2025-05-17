@@ -7,6 +7,7 @@ import Link from 'next/link'
 import TransactionModal from '@/components/TransactionModal'
 import PageLayout from '@/components/PageLayout'
 import { getIcon } from '@/utils/icons'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES, TRANSACTION_TYPE } from '@/utils/constants'
 
 // Define NavItem props interface
 interface NavItemProps {
@@ -24,7 +25,7 @@ interface Transaction {
   description: string;
   category: string;
   date: string;
-  type: 'income' | 'expense' | 'saving';
+  type: typeof TRANSACTION_TYPE.INCOME | typeof TRANSACTION_TYPE.EXPENSE | typeof TRANSACTION_TYPE.SAVING;
   notes?: string;
   aiReviewNeeded?: boolean;
 }
@@ -32,7 +33,7 @@ interface Transaction {
 // Filter options
 type DateFilter = 'this-month' | 'last-month' | 'this-year' | 'custom';
 type CategoryFilter = 'all' | string;
-type TypeFilter = 'all' | 'income' | 'expense' | 'saving';
+type TypeFilter = 'all' | typeof TRANSACTION_TYPE.INCOME | typeof TRANSACTION_TYPE.EXPENSE | typeof TRANSACTION_TYPE.SAVING;
 type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'category';
 
 export default function TransactionsPage() {
@@ -346,9 +347,9 @@ export default function TransactionsPage() {
   }
   
   const formatAmount = (amount: number, type: string): string => {
-    if (type === 'income') {
+    if (type === TRANSACTION_TYPE.INCOME) {
       return `+₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
-    } else if (type === 'saving') {
+    } else if (type === TRANSACTION_TYPE.SAVING) {
       return `↗₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
     } else {
       return `-₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
@@ -358,40 +359,43 @@ export default function TransactionsPage() {
   // Get unique categories for filter
   const getUniqueCategories = () => {
     const allCategories = transactions.map(t => t.category);
-    return ['all', ...Array.from(new Set(allCategories))];
+
+    //map categories to their labels from constants
+    const category = allCategories.map(cat => {
+      const category = EXPENSE_CATEGORIES.find(c => c.name === cat) || SAVING_CATEGORIES.find(c => c.name === cat) || INCOME_CATEGORIES.find(c => c.name === cat);
+      return {name: category?.name || cat, label: category?.label || cat};
+    });
+
+    // return object with name and label along with 'all'
+    return [{name: 'all', label: 'All'}, ...category];
+    
   }
   
   // Add a function to get category icons
-  const getCategoryIcon = (category: string) => {
-    const icons: Record<string, string> = {
-      'Income': '💰',
-      'Salary': '💰',
-      'Food': '🍔',
-      'Utilities': '💡',
-      'Transfer': '↔️',
-      'Dining': '🍽️',
-      'Shopping': '🛍️',
-      'Entertainment': '🎬',
-      'Travel': '✈️',
-      'Health': '🏥',
-      'Health & Medical': '🏥',
-      'Personal Care': '💆',
-      'Education': '📚',
-      'Groceries': '🛒',
-      'Housing': '🏠',
-      'Transportation': '🚗',
-      'Bills & Utilities': '📱',
-      'Business': '💼',
-      'Investments': '📈',
-      'Rental Income': '🏘️',
-      'Dividends': '💸',
-      'Interest': '💹',
-      'Gifts': '🎁',
-      'Gifts & Donations': '🎁',
-      'Refunds': '↩️',
-      'Other': '📋'
+  const getCategoryIcon = (categoryName: string) => {
+    const allCategories = [
+      ...Object.values(EXPENSE_CATEGORIES),
+      ...Object.values(SAVING_CATEGORIES),
+      ...Object.values(INCOME_CATEGORIES),
+    ];
+    const category = allCategories.find(cat => cat.name === categoryName);
+
+    if (category) {
+      return getIcon(category.icon, { className: `h-5 w-5` });
     }
-    return icons[category] || '📋'
+
+    return getIcon('other', { className: `h-5 w-5` });
+  }
+
+  // Add a function to get category labels
+  const getCategoryLabel = (categoryName: string) => {
+    const allCategories = [
+      ...Object.values(EXPENSE_CATEGORIES),
+      ...Object.values(SAVING_CATEGORIES),
+      ...Object.values(INCOME_CATEGORIES),
+    ];
+    const category = allCategories.find(cat => cat.name === categoryName);
+    return category?.label || categoryName;
   }
   
   // Handler for date filter change
@@ -601,8 +605,8 @@ export default function TransactionsPage() {
                 className="w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="all">All Categories</option>
-                {getUniqueCategories().filter(c => c !== 'all').map(category => (
-                  <option key={category} value={category}>{category}</option>
+                {getUniqueCategories().filter(c => c.name !== 'all').map(category => (
+                  <option key={category.name} value={category.name}>{category.label}</option>
                 ))}
               </select>
             </div>
@@ -614,9 +618,9 @@ export default function TransactionsPage() {
                 className="w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-                <option value="saving">Saving</option>
+                <option value={TRANSACTION_TYPE.INCOME}>Income</option>
+                <option value={TRANSACTION_TYPE.EXPENSE}>Expense</option>
+                <option value={TRANSACTION_TYPE.SAVING}>Saving</option>
               </select>
             </div>
             
@@ -681,15 +685,15 @@ export default function TransactionsPage() {
                           {getCategoryIcon(transaction.category)}
                         </span>
                         <span className="text-sm text-gray-900">
-                          {transaction.category}
+                          {getCategoryLabel(transaction.category)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                       <span className={
-                        transaction.type === 'income' 
+                        transaction.type === TRANSACTION_TYPE.INCOME 
                           ? 'text-green-600' 
-                          : transaction.type === 'saving' 
+                          : transaction.type === TRANSACTION_TYPE.SAVING 
                             ? 'text-blue-600' 
                             : 'text-red-600'
                       }>
@@ -727,9 +731,9 @@ export default function TransactionsPage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-500">{formatDate(transaction.date)}</span>
                   <span className={
-                    transaction.type === 'income' 
+                    transaction.type === TRANSACTION_TYPE.INCOME 
                       ? 'text-green-600 font-medium' 
-                      : transaction.type === 'saving' 
+                      : transaction.type === TRANSACTION_TYPE.SAVING 
                         ? 'text-blue-600 font-medium' 
                         : 'text-red-600 font-medium'
                   }>

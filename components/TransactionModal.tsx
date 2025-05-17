@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIcon } from '@/utils/icons';
+import { TRANSACTION_TYPE, EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES } from '@/utils/constants';
 
 interface Account {
   id: string;
@@ -21,55 +22,19 @@ interface TransactionModalProps {
     description: string;
     category: string;
     date: string;
-    type: 'income' | 'expense' | 'saving' | 'transfer';
+    type: typeof TRANSACTION_TYPE.INCOME | typeof TRANSACTION_TYPE.EXPENSE | typeof TRANSACTION_TYPE.SAVING | 'TRANSFER';
     notes?: string;
   };
   mode: 'add' | 'edit';
   isSubmitting?: boolean;
 }
 
-const EXPENSE_CATEGORIES = [
-  'Food & Dining', 
-  'Groceries',
-  'Shopping',
-  'Transportation',
-  'Entertainment',
-  'Bills & Utilities',
-  'Health & Medical',
-  'Housing',
-  'Education',
-  'Travel',
-  'Personal Care',
-  'Investments',
-  'Gifts & Donations',
-  'Other'
-];
-
-const INCOME_CATEGORIES = [
-  'Salary',
-  'Business',
-  'Investments',
-  'Rental Income',
-  'Gifts',
-  'Interest',
-  'Dividends',
-  'Refunds',
-  'Other'
-];
-
-const SAVING_CATEGORIES = [
-  'Investments',
-  'Bank Savings',
-  'Fixed Deposit',
-  'Retirement',
-  'Emergency Fund',
-  'Education Fund',
-  'Stock Market',
-  'Mutual Funds',
-  'Gold',
-  'Real Estate',
-  'Other'
-];
+const typeToLabel: Record<string, string> = {
+  [TRANSACTION_TYPE.INCOME]: 'Income',
+  [TRANSACTION_TYPE.EXPENSE]: 'Expense',
+  [TRANSACTION_TYPE.SAVING]: 'Savings',
+  TRANSFER: 'Transfer',
+};
 
 export default function TransactionModal({ 
   isOpen, 
@@ -89,7 +54,7 @@ export default function TransactionModal({
     description: '',
     category: '',
     date: new Date().toISOString().slice(0, 10),
-    type: 'expense' as 'income' | 'expense' | 'saving' | 'transfer',
+    type: TRANSACTION_TYPE.EXPENSE as typeof TRANSACTION_TYPE.INCOME | typeof TRANSACTION_TYPE.EXPENSE | typeof TRANSACTION_TYPE.SAVING | 'TRANSFER',
     notes: ''
   });
 
@@ -165,11 +130,10 @@ export default function TransactionModal({
   };
 
   // Handle transaction type change
-  const handleTypeChange = (type: 'income' | 'expense' | 'saving' | 'transfer') => {
+  const handleTypeChange = (type: typeof TRANSACTION_TYPE.INCOME | typeof TRANSACTION_TYPE.EXPENSE | typeof TRANSACTION_TYPE.SAVING | 'TRANSFER') => {
     setFormData(prev => ({
       ...prev,
       type,
-      // Reset category when changing type
       category: ''
     }));
   };
@@ -330,9 +294,9 @@ export default function TransactionModal({
               <div className="flex rounded-md overflow-hidden border">
                 <button
                   type="button"
-                  onClick={() => handleTypeChange('income')}
+                  onClick={() => handleTypeChange(TRANSACTION_TYPE.INCOME)}
                   className={`flex-1 py-2 px-4 focus:outline-none ${
-                    formData.type === 'income' 
+                    formData.type === TRANSACTION_TYPE.INCOME 
                       ? 'bg-green-500 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -341,9 +305,9 @@ export default function TransactionModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTypeChange('expense')}
+                  onClick={() => handleTypeChange(TRANSACTION_TYPE.EXPENSE)}
                   className={`flex-1 py-2 px-4 focus:outline-none ${
-                    formData.type === 'expense' 
+                    formData.type === TRANSACTION_TYPE.EXPENSE 
                       ? 'bg-red-500 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -352,9 +316,9 @@ export default function TransactionModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTypeChange('saving')}
+                  onClick={() => handleTypeChange(TRANSACTION_TYPE.SAVING)}
                   className={`flex-1 py-2 px-4 focus:outline-none ${
-                    formData.type === 'saving' 
+                    formData.type === TRANSACTION_TYPE.SAVING 
                       ? 'bg-blue-500 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
@@ -460,22 +424,22 @@ export default function TransactionModal({
                 className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="">Select a category</option>
-                {formData.type === 'income' ? (
-                  INCOME_CATEGORIES.map(category => (
-                    <option key={category} value={category}>
-                      {category}
+                {formData.type === TRANSACTION_TYPE.INCOME ? (
+                  Object.values(INCOME_CATEGORIES).map(category => (
+                    <option key={category.name} value={category.name}>
+                      {category.label}
                     </option>
                   ))
-                ) : formData.type === 'expense' ? (
-                  EXPENSE_CATEGORIES.map(category => (
-                    <option key={category} value={category}>
-                      {category}
+                ) : formData.type === TRANSACTION_TYPE.EXPENSE ? (
+                  Object.values(EXPENSE_CATEGORIES).map(category => (
+                    <option key={category.name} value={category.name}>
+                      {category.label}
                     </option>
                   ))
                 ) : (
-                  SAVING_CATEGORIES.map(category => (
-                    <option key={category} value={category}>
-                      {category}
+                  Object.values(SAVING_CATEGORIES).map(category => (
+                    <option key={category.name} value={category.name}>
+                      {category.label}
                     </option>
                   ))
                 )}

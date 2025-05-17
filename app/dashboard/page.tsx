@@ -8,6 +8,7 @@ import TransactionModal from '@/components/TransactionModal'
 import TransactionsList from '@/components/dashboard/TransactionsList'
 import PageLayout from '@/components/PageLayout'
 import { getIcon, getNavIcon, getTransactionIcon } from '@/utils/icons'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES, TRANSACTION_TYPE } from '@/utils/constants'
 
 // Define interfaces for our component props
 interface NavItemProps {
@@ -155,24 +156,14 @@ export default function Dashboard() {
   const [savingsByCategory, setSavingsByCategory] = useState<Record<string, number>>({})
   
   // Define category colors
-  const categoryColors: Record<string, string> = {
-    "Housing": "bg-indigo-600",
-    "Food & Dining": "bg-purple-500",
-    "Groceries": "bg-emerald-500",
-    "Transportation": "bg-blue-500",
-    "Entertainment": "bg-green-500",
-    "Bills & Utilities": "bg-yellow-500",
-    "Shopping": "bg-pink-500",
-    "Health & Medical": "bg-red-500",
-    "Personal Care": "bg-orange-500",
-    "Education": "bg-teal-500",
-    "Travel": "bg-cyan-500",
-    "Investments": "bg-lime-500",
-    "Gifts & Donations": "bg-amber-500",
-    "Salary": "bg-violet-500",
-    "Business": "bg-rose-500",
-    "Income": "bg-green-600",
-    "Other": "bg-gray-400"
+  function getCategoryColor(categoryName: string): string {
+    const allCategories = [
+      ...Object.values(EXPENSE_CATEGORIES),
+      ...Object.values(SAVING_CATEGORIES),
+      ...Object.values(INCOME_CATEGORIES),
+    ];
+    const category = allCategories.find(cat => cat.name === categoryName);
+    return category?.color || 'bg-gray-400';
   }
   
   // Fetch accounts data 
@@ -271,25 +262,25 @@ export default function Dashboard() {
 
       // Calculate totals for current period
       const currentIncome = currentSummaries
-        .filter((s: any) => s.type === 'income')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.INCOME)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentExpenses = currentSummaries
-        .filter((s: any) => s.type === 'expense')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.EXPENSE)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentSavings = currentSummaries
-        .filter((s: any) => s.type === 'saving')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.SAVING)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const currentNetFlow = currentIncome - currentExpenses;
 
       // Calculate totals for previous period
       const prevIncome = prevSummaries
-        .filter((s: any) => s.type === 'income')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.INCOME)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevExpenses = prevSummaries
-        .filter((s: any) => s.type === 'expense')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.EXPENSE)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevSavings = prevSummaries
-        .filter((s: any) => s.type === 'saving')
+        .filter((s: any) => s.type === TRANSACTION_TYPE.SAVING)
         .reduce((sum: number, s: any) => sum + Number(s.amount), 0);
       const prevNetFlow = prevIncome - prevExpenses;
 
@@ -319,9 +310,11 @@ export default function Dashboard() {
         }
       });
 
+      console.log(' ********currentSummaries', currentSummaries);
+
       // Calculate category spending
       const categorySpending = currentSummaries
-        .filter((s: any) => s.type === 'EXPENSE')
+        .filter((s: any) => s.type?.toUpperCase() === TRANSACTION_TYPE.EXPENSE)
         .reduce((acc: Record<string, number>, s: any) => {
           acc[s.category] = (acc[s.category] || 0) + Number(s.amount);
           return acc;
@@ -331,7 +324,7 @@ export default function Dashboard() {
 
       // Calculate savings by category
       const savingsByCategory = currentSummaries
-        .filter((s: any) => s.type === 'SAVING')
+        .filter((s: any) => s.type?.toUpperCase() === TRANSACTION_TYPE.SAVING)
         .reduce((acc: Record<string, number>, s: any) => {
           acc[s.category] = (acc[s.category] || 0) + Number(s.amount);
           return acc;
@@ -344,23 +337,9 @@ export default function Dashboard() {
   };
   
   // Helper function to assign colors to savings categories
-  const getSavingCategoryColor = (category: string): string => {
-    // Default savings category colors if not found in main categoryColors
-    const savingCategoryColors: Record<string, string> = {
-      'Investments': 'bg-blue-600',
-      'Bank Savings': 'bg-blue-400',
-      'Fixed Deposit': 'bg-cyan-600',
-      'Retirement': 'bg-indigo-600',
-      'Emergency Fund': 'bg-purple-600',
-      'Education Fund': 'bg-violet-500',
-      'Stock Market': 'bg-teal-600',
-      'Mutual Funds': 'bg-sky-500',
-      'Gold': 'bg-amber-500',
-      'Real Estate': 'bg-emerald-600',
-      'Other': 'bg-blue-300'
-    };
-    
-    return savingCategoryColors[category] || 'bg-blue-500';
+  const getSavingCategoryColor = (categoryName: string): string => {
+    const category = Object.values(SAVING_CATEGORIES).find(cat => cat.name === categoryName);
+    return category?.color || 'bg-blue-500';
   };
   
   useEffect(() => {
@@ -716,7 +695,7 @@ export default function Dashboard() {
                           `;
                           
                           // Get color from Tailwind class to hex mapping
-                          const hexColor = tailwindToHex[categoryColors[category] || 'bg-gray-400'] || "#9ca3af";
+                          const hexColor = tailwindToHex[getCategoryColor(category) || 'bg-gray-400'] || "#9ca3af";
                           
                           return (
                             <path
@@ -754,7 +733,7 @@ export default function Dashboard() {
                           category={category} 
                           amount={formatCurrency(amount)} 
                           percentage={Math.round((amount / Object.values(categorySpending).reduce((a, b) => a + b, 0)) * 100)} 
-                          color={categoryColors[category] || 'bg-gray-400'}
+                          color={getCategoryColor(category)}
                           isHighlighted={hoveredCategory === category} 
                         />
                       ))
@@ -805,7 +784,7 @@ export default function Dashboard() {
                           `;
                           
                           // Get color from Tailwind class to hex mapping
-                          const hexColor = tailwindToHex[categoryColors[category] || 'bg-gray-400'] || "#3B82F6";
+                          const hexColor = tailwindToHex[getCategoryColor(category) || 'bg-gray-400'] || "#3B82F6";
                           
                           return (
                             <path
@@ -843,7 +822,7 @@ export default function Dashboard() {
                           category={category} 
                           amount={formatCurrency(amount)} 
                           percentage={Math.round((amount / Object.values(savingsByCategory).reduce((a, b) => a + b, 0)) * 100)} 
-                          color={categoryColors[category] || 'bg-gray-400'}
+                          color={getCategoryColor(category)}
                           isHighlighted={hoveredCategory === category} 
                         />
                       ))
