@@ -24,6 +24,7 @@ model User {
   notifications      Notification[]
   profile            Profile?
   transactions       Transaction[]
+  insights           Insight[]
 }
 
 model Account {
@@ -68,6 +69,37 @@ model Budget {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum InsightType {
+  goal_suggestion
+  goal_progress
+  spending_alert
+  general_advice
+}
+
+enum InsightStatus {
+  new
+  action_taken
+  dismissed
+  archived
+}
+
+
+model Insight {
+  id               String      @id @default(uuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             InsightType
+  generatedAt      DateTime    @default(now())
+  validUntil       DateTime?
+  summary          String
+  details          Json
+  status           InsightStatus @default(new)
+  suggestedAction  String?
+  goal             FinancialGoal? @relation("GoalInsight")
+  sourceModel      String?
+  confidenceScore  Float?
+}
+
 model FinancialGoal {
   id                          String    @id @default(cuid())
   userId                      String
@@ -87,6 +119,8 @@ model FinancialGoal {
   confidenceScore             Float?
   tags                        String[]
   user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedInsightId             String?   @unique
+  linkedInsight               Insight?  @relation("GoalInsight", fields: [linkedInsightId], references: [id])
 }
 
 model Profile {

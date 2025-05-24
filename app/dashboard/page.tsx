@@ -38,6 +38,8 @@ interface CategoryItemProps {
 interface InsightItemProps {
   icon: string;
   text: string;
+  type: string;
+  suggestedAction?: string;
 }
 
 interface TransactionItemProps {
@@ -154,6 +156,10 @@ export default function Dashboard() {
   
   // Add state for savings categories
   const [savingsByCategory, setSavingsByCategory] = useState<Record<string, number>>({})
+  
+  // Add state for insights
+  const [insights, setInsights] = useState<any[]>([]);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   
   // Define category colors
   function getCategoryColor(categoryName: string): string {
@@ -340,6 +346,36 @@ export default function Dashboard() {
   const getSavingCategoryColor = (categoryName: string): string => {
     const category = Object.values(SAVING_CATEGORIES).find(cat => cat.name === categoryName);
     return category?.color || 'bg-blue-500';
+  };
+  
+  const fetchInsights = async (generateNew = false) => {
+    if (!session?.user) return;
+    
+    try {
+      setIsLoadingInsights(true);
+      const response = await fetch(
+        generateNew 
+          ? '/api/insights/generate'
+          : '/api/insights?limit=5&status=new',
+        {
+          method: generateNew ? 'POST' : 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch insights');
+      }
+      
+      const data = await response.json();
+      setInsights(generateNew ? data.insights : data.insights);
+    } catch (error) {
+      console.error('Error fetching insights:', error);
+    } finally {
+      setIsLoadingInsights(false);
+    }
   };
   
   useEffect(() => {
@@ -839,24 +875,44 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg shadow-sm">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="font-semibold">AI Insights</h2>
-              <button className="text-gray-400 hover:text-gray-500">
-                {getIcon('refresh', { className: 'h-5 w-5' })}
+              <button 
+                className="text-gray-400 hover:text-gray-500"
+                onClick={() => fetchInsights(true)}
+                disabled={isLoadingInsights}
+              >
+                {isLoadingInsights ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+                ) : (
+                  getIcon('refresh', { className: 'h-5 w-5' })
+                )}
               </button>
             </div>
             <div className="p-4 space-y-4">
-              <InsightItem 
-                icon="🍽️" 
-                text="Your spending on Dining Out is up 15% this month compared to last month." 
-              />
-              <InsightItem 
-                icon="💰" 
-                text="You saved 33% of your income this month, exceeding your goal of 25%." 
-              />
-              <div className="text-center mt-6">
-                <button className="text-sm text-gray-600 hover:text-gray-900">
-                  View More Insights
-                </button>
-              </div>
+              {insights.length > 0 ? (
+                insights.map((insight, index) => (
+                  <InsightItem 
+                    key={insight.id}
+                    icon={getInsightIcon(insight.type)}
+                    text={insight.summary}
+                    type={insight.type}
+                    suggestedAction={insight.suggestedAction}
+                  />
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  No insights available. Click refresh to generate new insights.
+                </div>
+              )}
+              {insights.length > 0 && (
+                <div className="text-center mt-6">
+                  <Link 
+                    href="/insights"
+                    className="text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    View More Insights
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -960,17 +1016,37 @@ function CategoryItem({ category, amount, percentage, color, isHighlighted = fal
   )
 }
 
-function InsightItem({ icon, text }: InsightItemProps) {
+function InsightItem({ icon, text, type, suggestedAction }: InsightItemProps) {
   return (
     <div className="flex space-x-3">
       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-lg">
         {icon}
       </div>
-      <div>
+      <div className="flex-1">
         <p className="text-sm text-gray-700">{text}</p>
+        {suggestedAction && (
+          <p className="text-xs text-gray-500 mt-1">
+            Suggested Action: {suggestedAction}
+          </p>
+        )}
       </div>
     </div>
   )
+}
+
+function getInsightIcon(type: string): string {
+  switch (type) {
+    case 'goal_suggestion':
+      return '🎯';
+    case 'goal_progress':
+      return '📈';
+    case 'spending_alert':
+      return '⚠️';
+    case 'general_advice':
+      return '💡';
+    default:
+      return 'ℹ️';
+  }
 }
 
 function TransactionItem({ 
