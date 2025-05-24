@@ -69,7 +69,7 @@ export default function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: Sideb
       
       <nav className="flex-1 space-y-1">
         <NavItem href="/dashboard" icon="dashboard" isActive={pathname === '/dashboard'}>Dashboard</NavItem>
-        <NavItem href="/transactions" icon="transactions" isActive={pathname === '/transactions' || pathname.startsWith('/transactions/')}>Transactions</NavItem>
+        <NavItem href="/transactions" icon="transaction" isActive={pathname === '/transactions' || pathname.startsWith('/transactions/')}>Transactions</NavItem>
         <NavItem href="/analytics" icon="analytics" isActive={pathname === '/analytics'}>Analytics</NavItem>
         <NavItem href="/budget" icon="budget" isActive={pathname === '/budget'}>Budget</NavItem>
         <NavItem href="/insights" icon="insights" isActive={pathname === '/insights'}>Insights</NavItem>

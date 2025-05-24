@@ -4,6 +4,7 @@ import { FINANCIAL_GOAL_TYPES, FINANCIAL_GOAL_PRIORITIES } from '@/utils/constan
 import { getIcon } from '@/utils/icons';
 import Modal from '../Modal';
 import { formatCurrency, formatDate } from "@/utils/utils";
+import ProgressStepper from "../ProgressStepper";
 
 function monthsBetween(start: Date, end: Date) {
   return (
@@ -11,6 +12,8 @@ function monthsBetween(start: Date, end: Date) {
     (end.getMonth() - start.getMonth())
   );
 }
+
+const steps = [1, 2, 3, 4, 5];
 
 export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: { onComplete: () => void, editGoal?: any, onClose: () => void }) {
   const [step, setStep] = useState(1);
@@ -88,8 +91,11 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   return (
     <Modal isOpen={true} onClose={onClose} className="max-w-lg">
       <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-      <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">{editGoal ? 'Edit Goal' : 'Create a Financial Goal'}</h2>
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            {getIcon('target', { className: 'h-6 w-6' })}
+            <h2 className="text-xl font-semibold">{editGoal ? 'Edit Goal' : 'Create a Financial Goal'}</h2>
+          </div>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -97,9 +103,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             {getIcon('x', { className: 'h-6 w-6' })}
           </button>
         </div>
-        <div className="mb-6">
-          <div className="text-xs text-gray-500">Step {step} of 5</div>
-        </div>
+        <ProgressStepper step={step} steps={steps} className="mb-6" />
         {step === 1 && (
           <div>
             <div className="mb-4 font-semibold">What is your goal?</div>

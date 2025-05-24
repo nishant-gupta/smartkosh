@@ -120,13 +120,13 @@ function NotificationsContent() {
   }, [currentPage])
   
   return (
-    <div className="max-w-4xl mx-auto py-6">
-      <div className="flex justify-end items-center mb-6">
+    <div className="p-6">
+      <div className="flex justify-end items-center mb-6 w-full sm:w-auto">
         
           {notifications.some(n => !n.read) && (
             <button 
               onClick={markAllAsRead}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
             >
               Mark all as read
             </button>
