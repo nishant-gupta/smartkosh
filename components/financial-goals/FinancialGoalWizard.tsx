@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { FINANCIAL_GOAL_TYPES, FINANCIAL_GOAL_PRIORITIES } from '@/utils/constants';
 import { getIcon } from '@/utils/icons';
 import Modal from '../Modal';
+import { formatCurrency, formatDate } from "@/utils/utils";
 
 function monthsBetween(start: Date, end: Date) {
   return (
@@ -85,8 +86,8 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose}>
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
+    <Modal isOpen={true} onClose={onClose} className="max-w-lg">
+      <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
       <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">{editGoal ? 'Edit Goal' : 'Create a Financial Goal'}</h2>
           <button 
@@ -106,16 +107,16 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
               {FINANCIAL_GOAL_TYPES.map((g) => (
                 <button
                   key={g.value}
-                  className={`border rounded p-3 flex flex-col items-center ${goalType === g.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'}`}
+                  className={`border rounded p-3 flex flex-col items-center ${goalType === g.value ? 'border-gray-600 bg-gray-600 text-white' : 'border-gray-200'}`}
                   onClick={() => setGoalType(g.value)}
                 >
-                  <span className="text-2xl mb-1">{getIcon(g.icon, { className: 'h-8 w-8' })}</span>
+                  <span className="text-2xl mb-1">{getIcon(g.icon, { className: `h-8 w-8 ${goalType === g.value ? 'invert' : ''}` })}</span>
                   <span>{g.label}</span>
                 </button>
               ))}
             </div>
             <div className="mt-6 flex justify-end">
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!goalType} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded" disabled={!goalType} onClick={next}>Next</button>
             </div>
           </div>
         )}
@@ -134,9 +135,9 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
               value={description}
               onChange={e => setDescription(e.target.value)}
             />
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!title} onClick={next}>Next</button>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={!title} onClick={next}>Next</button>
             </div>
           </div>
         )}
@@ -157,9 +158,9 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
               value={targetDate}
               onChange={e => setTargetDate(e.target.value)}
             />
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!targetAmount || !targetDate} onClick={next}>Next</button>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={!targetAmount || !targetDate} onClick={next}>Next</button>
             </div>
           </div>
         )}
@@ -186,9 +187,9 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                 ))}
               </select>
             </div>
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={currentAmount === ""} onClick={next}>Next</button>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={currentAmount === ""} onClick={next}>Next</button>
             </div>
           </div>
         )}
@@ -197,13 +198,13 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             <div className="mb-4 font-semibold">Review your goal</div>
             <div className="mb-2"><b>Goal:</b> {title || FINANCIAL_GOAL_TYPES.find(g => g.value === goalType)?.label}</div>
             <div className="mb-2"><b>Description:</b> {description || <span className="text-gray-400">(none)</span>}</div>
-            <div className="mb-2"><b>Target:</b> ₹{targetAmount} by {targetDate}</div>
-            <div className="mb-2"><b>Current:</b> ₹{currentAmount}</div>
+            <div className="mb-2"><b>Target:</b> ₹{formatCurrency(Number(targetAmount) || 0)} by {formatDate(targetDate)}</div>
+            <div className="mb-2"><b>Current:</b> ₹{formatCurrency(Number(currentAmount) || 0)}</div>
             <div className="mb-2"><b>Priority:</b> {FINANCIAL_GOAL_PRIORITIES.find(p => p.value === priority)?.label}</div>
-            <div className="mb-2"><b>Estimated Monthly Contribution:</b> ₹{monthlyContribution || autoMonthly || <span className="text-gray-400">(not calculated)</span>}</div>
-            <div className="flex justify-between mt-6">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={handleSubmit} disabled={loading}>{loading ? 'Saving...' : (editGoal ? 'Update Goal' : 'Create Goal')}</button>
+            <div className="mb-2"><b>Estimated Monthly Contribution:</b> ₹{formatCurrency(Number(monthlyContribution) || Number(autoMonthly) || 0)}</div>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white py-2 px-4 rounded-md w-full sm:w-auto" onClick={handleSubmit} disabled={loading}>{loading ? 'Saving...' : (editGoal ? 'Update Goal' : 'Create Goal')}</button>
             </div>
           </div>
         )}
