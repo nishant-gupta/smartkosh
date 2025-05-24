@@ -28,6 +28,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   const [monthlyContribution, setMonthlyContribution] = useState<number | "">(editGoal?.monthlyContributionEstimate || "");
   const [priority, setPriority] = useState<number>(editGoal?.priority || 3);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (editGoal) {
@@ -60,6 +61,41 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   // Step navigation
   const next = () => setStep((s) => s + 1);
   const prev = () => setStep((s) => s - 1);
+
+  // Step navigation with validation
+  const handleNextStep1 = () => {
+    if (!goalType) {
+      setFieldErrors({ goalType: 'Please select a goal type' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep2 = () => {
+    if (!title) {
+      setFieldErrors({ title: 'Title is required' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep3 = () => {
+    const errors: { [key: string]: string } = {};
+    if (!targetAmount || isNaN(Number(targetAmount)) || Number(targetAmount) < 1) errors.targetAmount = 'Target amount must be at least 1';
+    if (!targetDate) errors.targetDate = 'Target date is required';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep4 = () => {
+    if (currentAmount === '' || isNaN(Number(currentAmount)) || Number(currentAmount) < 0) {
+      setFieldErrors({ currentAmount: 'Current amount must be 0 or more' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
 
   // Submit handler
   const handleSubmit = async () => {
@@ -112,15 +148,16 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                 <button
                   key={g.value}
                   className={`border rounded p-3 flex flex-col items-center ${goalType === g.value ? 'border-gray-600 bg-gray-600 text-white' : 'border-gray-200'}`}
-                  onClick={() => setGoalType(g.value)}
+                  onClick={() => { setGoalType(g.value); setFieldErrors({}); }}
                 >
                   <span className="text-2xl mb-1">{getIcon(g.icon, { className: `h-8 w-8 ${goalType === g.value ? 'invert' : ''}` })}</span>
                   <span>{g.label}</span>
                 </button>
               ))}
             </div>
+            {fieldErrors.goalType && <div className="text-red-600 text-xs mt-2">{fieldErrors.goalType}</div>}
             <div className="mt-6 flex justify-end">
-              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded" disabled={!goalType} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded" onClick={handleNextStep1}>Next</button>
             </div>
           </div>
         )}
@@ -136,11 +173,12 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                 id="title"
                 name="title"
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={e => { setTitle(e.target.value); setFieldErrors({}); }}
                 placeholder="Goal Title"
                 required
                 className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
               />
+              {fieldErrors.title && <div className="text-red-600 text-xs mt-1">{fieldErrors.title}</div>}
             </div>
             <div className="mb-4">
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
@@ -157,7 +195,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
               <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
-              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={!title} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep2}>Next</button>
             </div>
           </div>
         )}
@@ -177,7 +215,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                   id="targetAmount"
                   name="targetAmount"
                   value={Math.abs(Number(targetAmount)) || ''}
-                  onChange={e => setTargetAmount(Number(e.target.value))}
+                  onChange={e => { setTargetAmount(Number(e.target.value)); setFieldErrors({}); }}
                   placeholder="0"
                   min="1"
                   step="1"
@@ -188,6 +226,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                   <span className="text-gray-500 sm:text-sm">INR</span>
                 </div>
               </div>
+              {fieldErrors.targetAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetAmount}</div>}
             </div>
             <div className="mb-4">
               <label htmlFor="targetDate" className="block text-sm font-medium text-gray-700 mb-1">Target Date *</label>
@@ -195,14 +234,15 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                 type="date"
                 name="targetDate"
                 value={targetDate}
-                onChange={e => setTargetDate(e.target.value)}
+                onChange={e => { setTargetDate(e.target.value); setFieldErrors({}); }}
                 className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 required
               />
+              {fieldErrors.targetDate && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetDate}</div>}
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
               <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
-              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={!targetAmount || !targetDate} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep3}>Next</button>
             </div>
           </div>
         )}
@@ -222,7 +262,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                   id="currentAmount"
                   name="currentAmount"
                   value={Math.abs(Number(currentAmount)) || ''}
-                  onChange={e => setCurrentAmount(Number(e.target.value))}
+                  onChange={e => { setCurrentAmount(Number(e.target.value)); setFieldErrors({}); }}
                   placeholder="0"
                   min="1"
                   step="1"
@@ -233,6 +273,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                   <span className="text-gray-500 sm:text-sm">INR</span>
                 </div>
               </div>
+              {fieldErrors.currentAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.currentAmount}</div>}
             </div>
             <div className="mb-4">
               <label className="block mb-1">Priority</label>
@@ -248,7 +289,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
               <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
-              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" disabled={currentAmount === ""} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep4}>Next</button>
             </div>
           </div>
         )}

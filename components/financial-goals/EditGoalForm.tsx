@@ -24,20 +24,29 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    const errors: { [key: string]: string } = {};
+    if (!form.title) errors.title = 'Title is required';
+    if (form.targetAmount === '' || isNaN(Number(form.targetAmount)) || Number(form.targetAmount) < 1) errors.targetAmount = 'Target amount must be at least 1';
+    if (form.currentAmount === '' || isNaN(Number(form.currentAmount)) || Number(form.currentAmount) < 0) errors.currentAmount = 'Current amount must be 0 or more';
+    if (!form.targetDate) errors.targetDate = 'Target date is required';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setLoading(false);
+      return;
+    }
     try {
-      if (!form.title || form.targetAmount === '' || form.currentAmount === '' || !form.targetDate) {
-        throw new Error('Please fill in all required fields');
-      }
       const payload = {
         ...goal,
         ...form,
@@ -85,8 +94,8 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               value={form.title}
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
             />
+            {fieldErrors.title && <div className="text-red-600 text-xs mt-1">{fieldErrors.title}</div>}
           </div>
           {/* Amount */}
           <div className="mb-4">
@@ -106,13 +115,13 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
                   placeholder="0"
                   min="1"
                   step="1"
-                  required
                   className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">INR</span>
                 </div>
               </div>
+              {fieldErrors.targetAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetAmount}</div>}
             </div>
             {/* Current Amount */}
             <div className="mb-4">
@@ -132,39 +141,14 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
                   placeholder="0"
                   min="1"
                   step="1"
-                  required
                   className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">INR</span>
                 </div>
               </div>
+              {fieldErrors.currentAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.currentAmount}</div>}
             </div>
-
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₹) *</label>
-            <input
-              type="number"
-              name="targetAmount"
-              value={form.targetAmount}
-              onChange={handleChange}
-              className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
-              min={1}
-            />
-          </div> */}
-          {/* <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Amount (₹) *</label>
-            <input
-              type="number"
-              name="currentAmount"
-              value={form.currentAmount}
-              onChange={handleChange}
-              className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
-              min={0}
-            />
-          </div> */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Target Date *</label>
             <input
@@ -173,8 +157,8 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               value={form.targetDate}
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
             />
+            {fieldErrors.targetDate && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetDate}</div>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
