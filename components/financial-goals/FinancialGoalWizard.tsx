@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { FINANCIAL_GOAL_TYPES, FINANCIAL_GOAL_PRIORITIES } from '@/utils/constants';
 import { getIcon } from '@/utils/icons';
 import Modal from '../Modal';
+import { formatCurrency, formatDate } from "@/utils/utils";
+import ProgressStepper from "../ProgressStepper";
 
 function monthsBetween(start: Date, end: Date) {
   return (
@@ -10,6 +12,8 @@ function monthsBetween(start: Date, end: Date) {
     (end.getMonth() - start.getMonth())
   );
 }
+
+const steps = [1, 2, 3, 4, 5];
 
 export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: { onComplete: () => void, editGoal?: any, onClose: () => void }) {
   const [step, setStep] = useState(1);
@@ -24,6 +28,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   const [monthlyContribution, setMonthlyContribution] = useState<number | "">(editGoal?.monthlyContributionEstimate || "");
   const [priority, setPriority] = useState<number>(editGoal?.priority || 3);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (editGoal) {
@@ -57,6 +62,41 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   const next = () => setStep((s) => s + 1);
   const prev = () => setStep((s) => s - 1);
 
+  // Step navigation with validation
+  const handleNextStep1 = () => {
+    if (!goalType) {
+      setFieldErrors({ goalType: 'Please select a goal type' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep2 = () => {
+    if (!title) {
+      setFieldErrors({ title: 'Title is required' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep3 = () => {
+    const errors: { [key: string]: string } = {};
+    if (!targetAmount || isNaN(Number(targetAmount)) || Number(targetAmount) < 1) errors.targetAmount = 'Target amount must be at least 1';
+    if (!targetDate) errors.targetDate = 'Target date is required';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    setFieldErrors({});
+    next();
+  };
+  const handleNextStep4 = () => {
+    if (currentAmount === '' || isNaN(Number(currentAmount)) || Number(currentAmount) < 0) {
+      setFieldErrors({ currentAmount: 'Current amount must be 0 or more' });
+      return;
+    }
+    setFieldErrors({});
+    next();
+  };
+
   // Submit handler
   const handleSubmit = async () => {
     setLoading(true);
@@ -85,10 +125,13 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose}>
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
-      <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">{editGoal ? 'Edit Goal' : 'Create a Financial Goal'}</h2>
+    <Modal isOpen={true} onClose={onClose} className="max-w-lg">
+      <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            {getIcon('target', { className: 'h-6 w-6' })}
+            <h2 className="text-xl font-semibold">{editGoal ? 'Edit Goal' : 'Create a Financial Goal'}</h2>
+          </div>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -96,9 +139,7 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             {getIcon('x', { className: 'h-6 w-6' })}
           </button>
         </div>
-        <div className="mb-6">
-          <div className="text-xs text-gray-500">Step {step} of 5</div>
-        </div>
+        <ProgressStepper step={step} steps={steps} className="mb-6" />
         {step === 1 && (
           <div>
             <div className="mb-4 font-semibold">What is your goal?</div>
@@ -106,74 +147,134 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
               {FINANCIAL_GOAL_TYPES.map((g) => (
                 <button
                   key={g.value}
-                  className={`border rounded p-3 flex flex-col items-center ${goalType === g.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'}`}
-                  onClick={() => setGoalType(g.value)}
+                  className={`border rounded p-3 flex flex-col items-center ${goalType === g.value ? 'border-gray-600 bg-gray-600 text-white' : 'border-gray-200'}`}
+                  onClick={() => { setGoalType(g.value); setFieldErrors({}); }}
                 >
-                  <span className="text-2xl mb-1">{getIcon(g.icon, { className: 'h-8 w-8' })}</span>
+                  <span className="text-2xl mb-1">{getIcon(g.icon, { className: `h-8 w-8 ${goalType === g.value ? 'invert' : ''}` })}</span>
                   <span>{g.label}</span>
                 </button>
               ))}
             </div>
+            {fieldErrors.goalType && <div className="text-red-600 text-xs mt-2">{fieldErrors.goalType}</div>}
             <div className="mt-6 flex justify-end">
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!goalType} onClick={next}>Next</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded" onClick={handleNextStep1}>Next</button>
             </div>
           </div>
         )}
         {step === 2 && (
           <div>
             <div className="mb-4 font-semibold">Give your goal a name and description</div>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              placeholder="Goal Title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-            />
-            <textarea
-              className="w-full border rounded px-3 py-2 mb-3"
-              placeholder="Description (optional)"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!title} onClick={next}>Next</button>
+            <div className="mb-4">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                Goal Title *
+              </label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={title}
+                onChange={e => { setTitle(e.target.value); setFieldErrors({}); }}
+                placeholder="Goal Title"
+                required
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              {fieldErrors.title && <div className="text-red-600 text-xs mt-1">{fieldErrors.title}</div>}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Description (optional)
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep2}>Next</button>
             </div>
           </div>
         )}
         {step === 3 && (
           <div>
             <div className="mb-4 font-semibold">Set your target amount and date</div>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              type="number"
-              min={0}
-              placeholder="Target Amount (₹)"
-              value={targetAmount}
-              onChange={e => setTargetAmount(Number(e.target.value))}
-            />
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              type="date"
-              value={targetDate}
-              onChange={e => setTargetDate(e.target.value)}
-            />
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={!targetAmount || !targetDate} onClick={next}>Next</button>
+            <div className="mb-4">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                Target Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="targetAmount"
+                  name="targetAmount"
+                  value={Math.abs(Number(targetAmount)) || ''}
+                  onChange={e => { setTargetAmount(Number(e.target.value)); setFieldErrors({}); }}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  required
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+              {fieldErrors.targetAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetAmount}</div>}
+            </div>
+            <div className="mb-4">
+              <label htmlFor="targetDate" className="block text-sm font-medium text-gray-700 mb-1">Target Date *</label>
+              <input
+                type="date"
+                name="targetDate"
+                value={targetDate}
+                onChange={e => { setTargetDate(e.target.value); setFieldErrors({}); }}
+                className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+              {fieldErrors.targetDate && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetDate}</div>}
+            </div>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep3}>Next</button>
             </div>
           </div>
         )}
         {step === 4 && (
           <div>
             <div className="mb-4 font-semibold">How much have you saved so far?</div>
-            <input
-              className="w-full border rounded px-3 py-2 mb-3"
-              type="number"
-              min={0}
-              placeholder="Current Amount (₹)"
-              value={currentAmount}
-              onChange={e => setCurrentAmount(Number(e.target.value))}
-            />
+            <div className="mb-4">
+              <label htmlFor="currentAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                Current Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="currentAmount"
+                  name="currentAmount"
+                  value={Math.abs(Number(currentAmount)) || ''}
+                  onChange={e => { setCurrentAmount(Number(e.target.value)); setFieldErrors({}); }}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  required
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+              {fieldErrors.currentAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.currentAmount}</div>}
+            </div>
             <div className="mb-4">
               <label className="block mb-1">Priority</label>
               <select
@@ -186,9 +287,9 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
                 ))}
               </select>
             </div>
-            <div className="flex justify-between">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={currentAmount === ""} onClick={next}>Next</button>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded w-full sm:w-auto" onClick={handleNextStep4}>Next</button>
             </div>
           </div>
         )}
@@ -197,13 +298,13 @@ export default function FinancialGoalWizard({ onComplete, editGoal, onClose }: {
             <div className="mb-4 font-semibold">Review your goal</div>
             <div className="mb-2"><b>Goal:</b> {title || FINANCIAL_GOAL_TYPES.find(g => g.value === goalType)?.label}</div>
             <div className="mb-2"><b>Description:</b> {description || <span className="text-gray-400">(none)</span>}</div>
-            <div className="mb-2"><b>Target:</b> ₹{targetAmount} by {targetDate}</div>
-            <div className="mb-2"><b>Current:</b> ₹{currentAmount}</div>
+            <div className="mb-2"><b>Target:</b> ₹{formatCurrency(Number(targetAmount) || 0)} by {formatDate(targetDate)}</div>
+            <div className="mb-2"><b>Current:</b> ₹{formatCurrency(Number(currentAmount) || 0)}</div>
             <div className="mb-2"><b>Priority:</b> {FINANCIAL_GOAL_PRIORITIES.find(p => p.value === priority)?.label}</div>
-            <div className="mb-2"><b>Estimated Monthly Contribution:</b> ₹{monthlyContribution || autoMonthly || <span className="text-gray-400">(not calculated)</span>}</div>
-            <div className="flex justify-between mt-6">
-              <button className="text-gray-600" onClick={prev}>Back</button>
-              <button className="bg-indigo-600 text-white px-4 py-2 rounded" onClick={handleSubmit} disabled={loading}>{loading ? 'Saving...' : (editGoal ? 'Update Goal' : 'Create Goal')}</button>
+            <div className="mb-2"><b>Estimated Monthly Contribution:</b> ₹{formatCurrency(Number(monthlyContribution) || Number(autoMonthly) || 0)}</div>
+            <div className="flex flex-col sm:flex-row justify-between gap-3 w-full sm:w-auto">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto" onClick={prev}>Back</button>
+              <button className="bg-gray-900 hover:bg-gray-800 text-white py-2 px-4 rounded-md w-full sm:w-auto" onClick={handleSubmit} disabled={loading}>{loading ? 'Saving...' : (editGoal ? 'Update Goal' : 'Create Goal')}</button>
             </div>
           </div>
         )}

@@ -15,3 +15,7 @@ import { TRANSACTION_TYPE } from "./constants"
       return `-₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.abs(amount))}`
     }
   }
+
+  export const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)
+  }

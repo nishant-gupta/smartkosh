@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { getIcon } from '@/utils/icons'
+import Modal from '@/components/Modal'
 
 interface Account {
   id: string
@@ -245,19 +246,19 @@ export default function AccountsPage() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-end items-center mb-6">
+      <div className="flex justify-end items-center mb-6 w-full sm:w-auto">
         
-        <div className="flex space-x-3">
+        <div className="flex w-full sm:w-auto gap-3 justify-end items-center flex-col sm:flex-row">
           <button 
             onClick={() => setShowAddModal(true)} 
-            className="px-3 py-1.5 bg-gray-100 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-200"
+            className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-300 w-full sm:w-auto"
           >
             {getIcon('add', { className: 'h-4 w-4 mr-1' })}
             Add Manual Account
           </button>
           <button 
             onClick={() => setShowLinkModal(true)} 
-            className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800"
+            className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
           >
             {getIcon('add', { className: 'h-4 w-4 mr-1 invert' })}
             Link New Account
@@ -274,7 +275,7 @@ export default function AccountsPage() {
           <p className="text-gray-500 mb-4">Link your bank and credit card accounts to start tracking your finances.</p>
           <button 
             onClick={() => setShowLinkModal(true)} 
-            className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+            className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
           >
             Link an Account
           </button>
@@ -363,11 +364,22 @@ export default function AccountsPage() {
 
       {/* Link Account Modal */}
       {showLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full overflow-hidden">
+        <Modal isOpen={showLinkModal} onClose={() => setShowLinkModal(false)} className="max-w-lg">
+          <div className="bg-white rounded-lg max-w-lg w-full overflow-hidden p-6">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Connect Your Bank</h2>
-              <p className="text-gray-600 mb-6">Select your bank and enter your credentials to securely connect your account.</p>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  {getIcon('bank', { className: 'h-6 w-6' })}
+                  <h2 className="text-xl font-semibold">Connect Your Bank</h2>
+                </div>
+                <button 
+                  onClick={() => setShowLinkModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  {getIcon('x', { className: 'h-6 w-6' })}
+                </button>
+              </div>
+              <p className="text-gray-600 mb-4">Select your bank and enter your credentials to securely connect your account.</p>
               
               <form onSubmit={handleLinkAccount}>
                 <div className="mb-4">
@@ -458,17 +470,17 @@ export default function AccountsPage() {
                   </div>
                 )}
                 
-                <div className="flex justify-end space-x-3 mt-6">
+                <div className="flex justify-end gap-3 mt-6 w-full sm:w-auto flex-col sm:flex-row">
                   <button
                     type="button"
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-300 w-full sm:w-auto"
                     onClick={() => setShowLinkModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={`px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 ${!selectedBank || !credentials.username || !credentials.password ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto ${!selectedBank || !credentials.username || !credentials.password ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={!selectedBank || !credentials.username || !credentials.password}
                   >
                     Continue
@@ -477,16 +489,27 @@ export default function AccountsPage() {
               </form>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Add Manual Account Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full overflow-hidden">
+        <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} className="max-w-lg">
+          <div className="bg-white rounded-lg max-w-lg w-full overflow-hidden p-6">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Add Manual Account</h2>
-              <p className="text-gray-600 mb-6">Add an account that you'll update manually.</p>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  {getIcon('bank', { className: 'h-6 w-6' })}
+                  <h2 className="text-xl font-semibold">Add Manual Account</h2>
+                </div>
+                <button 
+                  onClick={() => setShowAddModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  {getIcon('x', { className: 'h-6 w-6' })}
+                </button>
+              </div>
+              <p className="text-gray-600 mb-4">Add an account that you'll update manually.</p>
               
               <form onSubmit={handleAddAccount}>
                 <div className="mb-4">
@@ -537,17 +560,17 @@ export default function AccountsPage() {
                   </div>
                 </div>
                 
-                <div className="flex justify-end space-x-3 mt-6">
+                <div className="flex justify-end gap-3 mt-6 w-full sm:w-auto flex-col sm:flex-row">
                   <button
                     type="button"
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-300 w-full sm:w-auto"
                     onClick={() => setShowAddModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+                    className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
                   >
                     Add Account
                   </button>
@@ -555,13 +578,13 @@ export default function AccountsPage() {
               </form>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full overflow-hidden">
+        <Modal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} className="max-w-lg">
+          <div className="bg-white rounded-lg max-w-lg w-full overflow-hidden p-6">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 {getIcon('check', { className: 'h-8 w-8 text-white' })}
@@ -578,7 +601,7 @@ export default function AccountsPage() {
                 <div className="text-lg font-medium mb-6">{newLinkedAccount?.name || selectedBank}</div>
               </div>
               
-              <div className="flex flex-col space-y-3">
+              <div className="flex flex-col gap-3 w-full sm:w-auto flex-col sm:flex-row">
                 <button
                   onClick={() => {
                     if (newLinkedAccount) {
@@ -593,7 +616,7 @@ export default function AccountsPage() {
                     // Navigate to dashboard
                     window.location.href = '/dashboard'
                   }}
-                  className="px-4 py-3 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+                  className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
                 >
                   Go to Dashboard
                 </button>
@@ -609,14 +632,14 @@ export default function AccountsPage() {
                     setShowSuccessModal(false)
                     setNewLinkedAccount(null)
                   }}
-                  className="px-4 py-3 text-gray-700 rounded-md hover:bg-gray-100"
+                  className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-300 w-full sm:w-auto"
                 >
                   View Linked Accounts
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

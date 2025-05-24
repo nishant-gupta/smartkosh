@@ -196,7 +196,7 @@ export default function BasicInfoPage() {
           <div className="mt-6 flex justify-end">
           <button
             type="submit"
-            className={`px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
             disabled={isSaving}
           >
             {isSaving ? 'Updating...' : 'Update Profile'}

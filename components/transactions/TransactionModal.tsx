@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIcon } from '@/utils/icons';
 import { TRANSACTION_TYPE, EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES } from '@/utils/constants';
+import Modal from '../Modal';
 
 interface Account {
   id: string;
@@ -267,13 +268,15 @@ export default function TransactionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md overflow-hidden">
-        <div className="p-6">
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
+      <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
-              {mode === 'add' ? 'Add Transaction' : 'Edit Transaction'}
-            </h2>
+            <div className="flex items-center gap-2">
+              {getIcon('transaction', { className: 'h-6 w-6' })}
+              <h2 className="text-xl font-semibold">
+                {mode === 'add' ? 'Add Transaction' : 'Edit Transaction'}
+              </h2>
+            </div>
             <button 
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
@@ -345,7 +348,7 @@ export default function TransactionModal({
                   onChange={handleChange}
                   placeholder="0"
                   min="1"
-                  step="1"
+                  step="1000"
                   required
                   className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 />
@@ -463,31 +466,31 @@ export default function TransactionModal({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-3 w-full sm:w-auto">
               {mode === 'edit' && (
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={isLoading}
-                  className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md"
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-md flex items-center text-sm hover:bg-red-700 w-full sm:w-auto"
                 >
                   Delete
                 </button>
               )}
 
-              <div className={`${mode === 'edit' ? 'ml-auto' : ''} flex space-x-3`}>
+              <div className={`${mode === 'edit' ? 'ml-auto' : ''} flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto`}>
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={isLoading}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md"
+                  className="px-3 py-1.5 bg-gray-200 text-gray-800 rounded-md flex items-center text-sm hover:bg-gray-300 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="px-3 py-1.5 bg-gray-900 text-white rounded-md flex items-center text-sm hover:bg-gray-800 w-full sm:w-auto"
                 >
                   {isSubmitting ? (
                     <>
@@ -510,8 +513,7 @@ export default function TransactionModal({
               <p className="mt-1 text-sm text-gray-500">Your transaction has been successfully saved.</p>
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 } 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { getIcon } from '@/utils/icons';
 import Modal from '../Modal';
-import { FINANCIAL_GOAL_PRIORITIES } from '@/utils/constants';
+import { FINANCIAL_GOAL_PRIORITIES, FINANCIAL_GOAL_STATUS } from '@/utils/constants';
 
 interface EditGoalFormProps {
   isOpen: boolean;
@@ -24,20 +24,29 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    const errors: { [key: string]: string } = {};
+    if (!form.title) errors.title = 'Title is required';
+    if (form.targetAmount === '' || isNaN(Number(form.targetAmount)) || Number(form.targetAmount) < 1) errors.targetAmount = 'Target amount must be at least 1';
+    if (form.currentAmount === '' || isNaN(Number(form.currentAmount)) || Number(form.currentAmount) < 0) errors.currentAmount = 'Current amount must be 0 or more';
+    if (!form.targetDate) errors.targetDate = 'Target date is required';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setLoading(false);
+      return;
+    }
     try {
-      if (!form.title || form.targetAmount === '' || form.currentAmount === '' || !form.targetDate) {
-        throw new Error('Please fill in all required fields');
-      }
       const payload = {
         ...goal,
         ...form,
@@ -55,10 +64,13 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
       <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Edit Goal</h2>
+          <div className="flex items-center gap-2">
+            {getIcon('target', { className: 'h-6 w-6' })}
+            <h2 className="text-xl font-semibold">Edit Goal</h2>
+          </div>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -82,33 +94,61 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               value={form.title}
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
             />
+            {fieldErrors.title && <div className="text-red-600 text-xs mt-1">{fieldErrors.title}</div>}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₹) *</label>
-            <input
-              type="number"
-              name="targetAmount"
-              value={form.targetAmount}
-              onChange={handleChange}
-              className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
-              min={1}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Amount (₹) *</label>
-            <input
-              type="number"
-              name="currentAmount"
-              value={form.currentAmount}
-              onChange={handleChange}
-              className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
-              min={0}
-            />
-          </div>
+          {/* Amount */}
+          <div className="mb-4">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                Target Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="targetAmount"
+                  name="targetAmount"
+                  value={Math.abs(Number(form.targetAmount)) || ''}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+              {fieldErrors.targetAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetAmount}</div>}
+            </div>
+            {/* Current Amount */}
+            <div className="mb-4">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                Current Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="currentAmount"
+                  name="currentAmount"
+                  value={Math.abs(Number(form.currentAmount)) || ''}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+              {fieldErrors.currentAmount && <div className="text-red-600 text-xs mt-1">{fieldErrors.currentAmount}</div>}
+            </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Target Date *</label>
             <input
@@ -117,8 +157,8 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               value={form.targetDate}
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-              required
             />
+            {fieldErrors.targetDate && <div className="text-red-600 text-xs mt-1">{fieldErrors.targetDate}</div>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -152,26 +192,28 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="in_progress">In Progress</option>
-              <option value="achieved">Achieved</option>
-              <option value="paused">Paused</option>
-              <option value="abandoned">Abandoned</option>
+              {
+              FINANCIAL_GOAL_STATUS.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
           </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-gray-900 hover:bg-gray-800 text-white py-2 px-4 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
             >
               {loading ? 'Saving...' : 'Update Goal'}
             </button>

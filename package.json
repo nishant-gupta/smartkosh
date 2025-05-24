@@ -23,6 +23,7 @@
     "bull": "^4.16.5",
     "csv-parse": "^5.6.0",
     "csv-parser": "^3.2.0",
+    "csv-writer": "^1.6.0",
     "ioredis": "^5.6.1",
     "jsonwebtoken": "^9.0.2",
     "next": "14.1.0",
