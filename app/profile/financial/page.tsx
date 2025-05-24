@@ -94,9 +94,7 @@ export default function FinancialInfoPage() {
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-semibold mb-6">Financial Information</h2>
-      
+    <div className="p-6">      
       {message.text && (
         <div className={`mb-4 p-3 rounded ${message.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
           {message.text}

@@ -116,7 +116,6 @@ export default function BasicInfoPage() {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold mb-6">Basic Information</h2>
       
       {message.text && (
         <div className={`mb-4 p-3 rounded ${message.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -194,40 +193,7 @@ export default function BasicInfoPage() {
               placeholder="Enter your full address"
             />
           </div>
-        </div>
-        
-        <div className="mt-8 border-t pt-6">
-          <h3 className="text-lg font-medium mb-4">Password Management</h3>
-          <div className="space-y-4">
-            {/* Current Password */}
-            <div>
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-              <input
-                type="password"
-                id="currentPassword"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            
-            {/* New Password */}
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-6">
+          <div className="mt-6 flex justify-end">
           <button
             type="submit"
             className={`px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-600 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -236,7 +202,8 @@ export default function BasicInfoPage() {
             {isSaving ? 'Updating...' : 'Update Profile'}
           </button>
         </div>
-      </form>
+      </div>
+    </form>
     </div>
   )
 } 

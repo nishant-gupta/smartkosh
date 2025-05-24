@@ -245,8 +245,8 @@ export default function AccountsPage() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Linked Accounts</h2>
+      <div className="flex justify-end items-center mb-6">
+        
         <div className="flex space-x-3">
           <button 
             onClick={() => setShowAddModal(true)} 

@@ -60,13 +60,21 @@ CREATE TABLE "Budget" (
 CREATE TABLE "FinancialGoal" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "goalType" TEXT NOT NULL,
     "targetAmount" DOUBLE PRECISION NOT NULL,
-    "currentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "deadline" TIMESTAMP(3),
-    "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+    "currentAmount" DOUBLE PRECISION NOT NULL,
+    "targetDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "source" TEXT NOT NULL,
+    "acceptedByUser" BOOLEAN NOT NULL,
+    "status" TEXT NOT NULL,
+    "monthlyContributionEstimate" DOUBLE PRECISION NOT NULL,
+    "priority" INTEGER,
+    "confidenceScore" DOUBLE PRECISION,
+    "tags" TEXT[],
 
     CONSTRAINT "FinancialGoal_pkey" PRIMARY KEY ("id")
 );
@@ -159,6 +167,9 @@ CREATE INDEX "FinancialSummary_userId_year_month_idx" ON "FinancialSummary"("use
 
 -- CreateIndex
 CREATE INDEX "FinancialSummary_userId_category_type_idx" ON "FinancialSummary"("userId", "category", "type");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FinancialSummary_userId_year_month_category_type_key" ON "FinancialSummary"("userId", "year", "month", "category", "type");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
