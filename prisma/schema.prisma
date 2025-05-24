@@ -1,142 +1,143 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-}        
+}
 
 model User {
-  id            String         @id @default(cuid())
-  name          String?
-  email         String         @unique
-  password      String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  accounts      Account[]
-  transactions  Transaction[]
-  budgets       Budget[]
-  goals         FinancialGoal[]
-  profile       Profile?       // Relation to Profile model
-  financialProfile FinancialProfile? // Relation to FinancialProfile model
-  notifications Notification[] // Relation to Notification model
-  backgroundJobs BackgroundJob[] // Relation to BackgroundJob model
-  financialSummaries FinancialSummary[] // Relation to FinancialSummary model
+  id                 String             @id @default(cuid())
+  name               String?
+  email              String             @unique
+  password           String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  accounts           Account[]
+  backgroundJobs     BackgroundJob[]
+  budgets            Budget[]
+  goals              FinancialGoal[]
+  financialProfile   FinancialProfile?
+  financialSummaries FinancialSummary[]
+  notifications      Notification[]
+  profile            Profile?
+  transactions       Transaction[]
 }
 
 model Account {
-  id            String         @id @default(cuid())
-  userId        String
-  name          String
-  type          String         // checking, savings, credit, investment
-  balance       Float
-  currency      String         @default("USD")
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  transactions  Transaction[]
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String        @id @default(cuid())
+  userId       String
+  name         String
+  type         String
+  balance      Float
+  currency     String        @default("USD")
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 }
 
 model Transaction {
-  id            String         @id @default(cuid())
-  userId        String
-  accountId     String
-  amount        Float
-  description   String
-  category      String
-  date          DateTime
-  type          String         // income, expense, transfer
-  notes         String?        // optional field for additional details
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String
+  amount      Float
+  description String
+  category    String
+  date        DateTime
+  type        String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Budget {
-  id            String         @id @default(cuid())
-  userId        String
-  name          String
-  amount        Float
-  category      String
-  period        String         // monthly, yearly
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  amount    Float
+  category  String
+  period    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FinancialGoal {
-  id            String         @id @default(cuid())
-  userId        String
-  name          String
-  targetAmount  Float
-  currentAmount Float          @default(0)
-  deadline      DateTime?
-  isCompleted   Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                          String    @id @default(cuid())
+  userId                      String
+  title                       String
+  description                 String?
+  goalType                    String
+  targetAmount                Float
+  currentAmount               Float
+  targetDate                  DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  source                      String
+  acceptedByUser              Boolean
+  status                      String
+  monthlyContributionEstimate Float
+  priority                    Int?
+  confidenceScore             Float?
+  tags                        String[]
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// New Profile model to store additional user information
 model Profile {
-  id            String         @id @default(cuid()) 
-  userId        String         @unique            // One-to-one relation with User
-  phone         String?
-  dob           DateTime?      // Date of birth
-  address       String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-} 
-
-// Financial profile model to store financial information
-model FinancialProfile {
-  id            String         @id @default(cuid())
-  userId        String         @unique            // One-to-one relation with User
-  yearlyIncome  String?
-  occupation    String?
-  incomeSource  String?        // Salary, Business, Investments, Freelance, Other
-  taxBracket    String?        // 0-5%, 5-10%, 10-20%, 20-30%, 30%+
-  savingsGoal   String?
-  financialGoals String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-} 
-
-// Notification model to track user notifications
-model Notification {
-  id            String    @id @default(cuid())
-  userId        String
-  title         String
-  message       String
-  type          String    // e.g., "success", "error", "info"
-  read          Boolean   @default(false)
-  relatedTo     String?   // Optional related entity (e.g., background job id)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  phone     String?
+  dob       DateTime?
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Background job model to track background tasks like CSV uploads
+model FinancialProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  yearlyIncome   String?
+  occupation     String?
+  incomeSource   String?
+  taxBracket     String?
+  savingsGoal    String?
+  financialGoals String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  relatedTo String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model BackgroundJob {
-  id            String         @id @default(cuid())
-  userId        String
-  type          String         // e.g., "transaction_upload"
-  status        String         // pending, processing, completed, failed
-  progress      Int            @default(0)
-  result        Json?          // Result data when job completes
-  error         String?        // Error message if job fails
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  status    String
+  progress  Int      @default(0)
+  result    Json?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model FinancialSummary {
@@ -149,10 +150,9 @@ model FinancialSummary {
   amount    Decimal
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, year, month, category, type])
   @@index([userId, year, month])
   @@index([userId, category, type])
-  @@unique([userId, year, month, category, type])
-} 
+}

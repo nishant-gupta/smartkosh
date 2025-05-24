@@ -19,6 +19,27 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
     await signOut({ callbackUrl: '/login' })
   }
 
+  const getPageTitle = () => {
+    switch (pathname) {
+      case '/profile':
+        return 'Profile Settings'
+      case '/profile/financial-goals':
+        return 'Financial Goals'
+      case '/profile/notifications':
+        return 'Notifications'
+      case '/profile/basic':
+        return 'Basic Information'
+      case '/profile/financial':
+        return 'Financial Information'
+      case '/profile/accounts':
+        return 'Linked Accounts'
+      case '/profile/change-password':
+        return 'Change Password'
+      default:
+        return 'Profile Settings'
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Mobile menu overlay */}
@@ -43,17 +64,44 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
         </div>
         
         <div className="mb-8">
-          <div className="text-lg text-white font-medium">Profile Settings</div>
+          <div className="text-lg text-white font-medium">{getPageTitle()}</div>
         </div>
         
         <nav className="flex-1 space-y-1">
-          <NavItem href="/profile/basic" isActive={pathname === '/profile' || pathname === '/profile/basic'}>Basic Info</NavItem>
-          <NavItem href="/profile/financial" isActive={pathname === '/profile/financial'}>Financial Info</NavItem>
-          <NavItem href="/profile/accounts" isActive={pathname === '/profile/accounts'}>Linked Accounts</NavItem>
+          <NavItem href="/profile/basic" isActive={pathname === '/profile' || pathname === '/profile/basic'}>
+            <div className="flex items-center space-x-2">
+              {getIcon('profile', { className: 'h-5 w-5 invert' })}
+              <span>Basic Info</span>
+            </div>
+          </NavItem>
+          <NavItem href="/profile/financial" isActive={pathname === '/profile/financial'}>
+            <div className="flex items-center space-x-2">
+              {getIcon('salary', { className: 'h-5 w-5 invert' })}
+              <span>Financial Info</span>
+            </div>
+          </NavItem>
+          <NavItem href="/profile/accounts" isActive={pathname === '/profile/accounts'}>
+            <div className="flex items-center space-x-2">
+              {getIcon('accounts', { className: 'h-5 w-5 invert' })}
+              <span>Linked Accounts</span>
+            </div>
+          </NavItem>
+          <NavItem href="/profile/financial-goals" isActive={pathname === '/profile/financial-goals'}>
+            <div className="flex items-center space-x-2">
+              {getIcon('target', { className: 'h-5 w-5 invert' })}
+              <span>Financial Goals</span>
+            </div>
+          </NavItem>
           <NavItem href="/profile/notifications" isActive={pathname?.startsWith('/profile/notifications')}>
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center space-x-2">
+              {getIcon('bell', { className: 'h-5 w-5 invert' })}
               <span>Notifications</span>
-              {/* Add notification indicator badge if needed */}
+            </div>
+          </NavItem>
+          <NavItem href="/profile/change-password" isActive={pathname === '/profile/change-password'}>
+            <div className="flex items-center space-x-2">
+              {getIcon('key', { className: 'h-5 w-5 invert' })}
+              <span>Change Password</span>
             </div>
           </NavItem>
         </nav>
@@ -99,7 +147,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
               >
                 {getIcon('menu', { className: 'h-6 w-6' })}
               </button>
-              <h1 className="text-lg md:text-xl font-semibold">Profile Settings</h1>
+              <h1 className="text-lg md:text-xl font-semibold">{getPageTitle()}</h1>
             </div>
             
             <div className="flex space-x-4">

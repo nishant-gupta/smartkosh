@@ -49,3 +49,28 @@ export const SAVING_CATEGORIES =
   REAL_ESTATE: { name: "real-estate", label: "Real Estate", color: "bg-amber-500", icon: "real-estate" },
   OTHER: { name: "other", label: "Other", color: "bg-gray-400", icon: "other" }
 };
+
+
+export const FINANCIAL_GOAL_TYPES = [
+  { value: "emergency_fund", label: "Emergency Fund", icon: "emergency-fund" },
+  { value: "retirement", label: "Retirement", icon: "retirement" },
+  { value: "purchase", label: "Big Purchase", icon: "shopping" },
+  { value: "debt_repayment", label: "Pay Off Debt", icon: "card" },
+  { value: "vacation", label: "Vacation", icon: "vacation" },
+  { value: "custom", label: "Custom Goal", icon: "target" },
+];
+
+export const FINANCIAL_GOAL_STATUS_ICONS: Record<string, string> = {
+  in_progress: 'refresh',
+  achieved: 'check-circle',
+  abandoned: 'delete',
+  paused: 'pause',
+};
+
+export const FINANCIAL_GOAL_PRIORITIES = [
+  { value: 1, label: "Highest" },
+  { value: 2, label: "High" },
+  { value: 3, label: "Medium" },
+  { value: 4, label: "Low" },
+  { value: 5, label: "Lowest" },
+];

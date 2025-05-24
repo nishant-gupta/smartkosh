@@ -121,9 +121,8 @@ function NotificationsContent() {
   
   return (
     <div className="max-w-4xl mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 pl-6">Notifications</h1>
-          
+      <div className="flex justify-end items-center mb-6">
+        
           {notifications.some(n => !n.read) && (
             <button 
               onClick={markAllAsRead}
