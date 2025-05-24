@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { getIcon } from '@/utils/icons';
 import Modal from '../Modal';
-import { FINANCIAL_GOAL_PRIORITIES } from '@/utils/constants';
+import { FINANCIAL_GOAL_PRIORITIES, FINANCIAL_GOAL_STATUS } from '@/utils/constants';
 
 interface EditGoalFormProps {
   isOpen: boolean;
@@ -58,7 +58,10 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
       <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Edit Goal</h2>
+          <div className="flex items-center gap-2">
+            {getIcon('target', { className: 'h-6 w-6' })}
+            <h2 className="text-xl font-semibold">Edit Goal</h2>
+          </div>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -85,7 +88,60 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               required
             />
           </div>
-          <div>
+          {/* Amount */}
+          <div className="mb-4">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                Target Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="targetAmount"
+                  name="targetAmount"
+                  value={Math.abs(Number(form.targetAmount)) || ''}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  required
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+            </div>
+            {/* Current Amount */}
+            <div className="mb-4">
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+                Current Amount *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">₹</span>
+                </div>
+                <input
+                  type="number"
+                  id="currentAmount"
+                  name="currentAmount"
+                  value={Math.abs(Number(form.currentAmount)) || ''}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="1"
+                  step="1"
+                  required
+                  className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">INR</span>
+                </div>
+              </div>
+            </div>
+
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (₹) *</label>
             <input
               type="number"
@@ -96,8 +152,8 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               required
               min={1}
             />
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Current Amount (₹) *</label>
             <input
               type="number"
@@ -108,7 +164,7 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               required
               min={0}
             />
-          </div>
+          </div> */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Target Date *</label>
             <input
@@ -152,10 +208,12 @@ export function EditGoalForm({ isOpen, onClose, goal, onSave }: EditGoalFormProp
               onChange={handleChange}
               className="block w-full py-2 px-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="in_progress">In Progress</option>
-              <option value="achieved">Achieved</option>
-              <option value="paused">Paused</option>
-              <option value="abandoned">Abandoned</option>
+              {
+              FINANCIAL_GOAL_STATUS.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
           </div>
 

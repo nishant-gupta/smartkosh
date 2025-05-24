@@ -348,7 +348,7 @@ export default function TransactionModal({
                   onChange={handleChange}
                   placeholder="0"
                   min="1"
-                  step="1"
+                  step="1000"
                   required
                   className="block w-full pl-7 pr-12 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                 />

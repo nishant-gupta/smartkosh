@@ -74,3 +74,10 @@ export const FINANCIAL_GOAL_PRIORITIES = [
   { value: 4, label: "Low" },
   { value: 5, label: "Lowest" },
 ];
+
+export const FINANCIAL_GOAL_STATUS = [
+  { label: "In Progress", value: "in_progress", icon: "refresh" },
+  { label: "Achieved", value: "achieved", icon: "check-circle" },
+  { label: "Abandoned", value: "abandoned", icon: "delete" },
+  { label: "Paused", value: "paused", icon: "pause" },
+];

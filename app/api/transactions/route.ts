@@ -134,6 +134,8 @@ export async function GET(req: Request) {
     } else if (sort === 'category') {
       orderBy = { category: "asc" };
     }
+
+    console.log("Where clause:", where);
     
     const transactions = await prisma.transaction.findMany({
       where,
@@ -149,10 +151,14 @@ export async function GET(req: Request) {
         },
       },
     });
+
+    console.log("Transactions:", transactions);
     
     const total = await prisma.transaction.count({
       where,
     });
+
+    console.log("Total transactions:", total);
     
     return NextResponse.json({
       transactions,
