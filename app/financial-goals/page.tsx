@@ -4,6 +4,7 @@ import FinancialGoalWizard from "@/components/financial-goals/FinancialGoalWizar
 import { getIcon } from '@/utils/icons';
 import { EditGoalForm } from '@/components/financial-goals/EditGoalForm';
 import FinancialGoalCard from "@/components/financial-goals/FinancialGoalCard";
+import PageLayout from "@/components/PageLayout";
 
 function showGoals(goals: any[], handleEdit: (goal: any) => void, handleDelete: (goalId: string) => void) {
   return (
@@ -74,6 +75,7 @@ export default function FinancialGoalsPage() {
   };
 
   return (
+    <PageLayout title="Financial Goals">
     <div className="p-6">
     <div className="flex justify-end items-center mb-6 w-full sm:w-auto">
         <button 
@@ -128,5 +130,6 @@ export default function FinancialGoalsPage() {
         )}
       </div>
     </div>
+    </PageLayout>
   );
 } 
