@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { getIcon } from '@/utils/icons'
 import PageLayout from '@/components/PageLayout';
+import { INSIGHTS_TYPES } from '@/utils/constants';
 
 interface Insight {
   id: string;
@@ -30,6 +31,27 @@ export default function InsightsPage() {
   const [selectedType, setSelectedType] = useState<string>('')
   const [selectedStatus, setSelectedStatus] = useState<string>('')
   const [message, setMessage] = useState({ type: '', text: '' })
+
+
+  const generateInsights = async () => {
+    if (!session?.user) return
+    try {
+      const response = await fetch('/api/insights/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: INSIGHTS_TYPES.FINANCIAL_INSIGHTS.value }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to generate insights')
+      }
+      setMessage({ type: 'success', text: 'Insights generation triggered successfully!' })
+    } catch (error) {
+      console.error('Error generating insights:', error)
+      setMessage({ type: 'error', text: 'Failed to generate insights. Please try again.' })
+    }
+  }
 
   const fetchInsights = async () => {
     if (!session?.user) return
@@ -144,14 +166,25 @@ export default function InsightsPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">AI Insights</h1>
-        <button
-          onClick={() => fetchInsights()}
-          disabled={isLoading}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-800 disabled:opacity-50"
-        >
-          {getIcon('refresh', { className: 'h-5 w-5' })}
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2 w-full justify-end sm:w-auto">
+          <button
+            onClick={() => generateInsights()}
+            disabled={isLoading}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-800 disabled:opacity-50"
+          >
+            {getIcon('ai-magic', { className: 'h-5 w-5 invert' })}
+            <span>Generate Insights</span>
+          </button>
+          <button
+            onClick={() => fetchInsights()}
+            disabled={isLoading}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-800 disabled:opacity-50"
+          >
+            {getIcon('refresh', { className: 'h-5 w-5' })}
+            <span>Refresh</span>
+          </button>
+        </div>
+        
       </div>
 
       {/* Filters */}
