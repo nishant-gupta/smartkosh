@@ -10,6 +10,22 @@ import PageLayout from '@/components/PageLayout'
 import { getIcon, getNavIcon, getTransactionIcon } from '@/utils/icons'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SAVING_CATEGORIES, TRANSACTION_TYPE } from '@/utils/constants'
 
+interface Insight {
+  id: string
+  type: string
+  summary: string
+  suggestedAction?: string
+  generatedAt: string
+  status: string
+  goal?: {
+    id: string
+    title: string
+    status: string
+    currentAmount: number
+    targetAmount: number
+  }
+}
+
 // Define interfaces for our component props
 interface NavItemProps {
   children: React.ReactNode;
@@ -158,7 +174,7 @@ export default function Dashboard() {
   const [savingsByCategory, setSavingsByCategory] = useState<Record<string, number>>({})
   
   // Add state for insights
-  const [insights, setInsights] = useState<any[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([])
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   
   // Define category colors
@@ -348,17 +364,14 @@ export default function Dashboard() {
     return category?.color || 'bg-blue-500';
   };
   
-  const fetchInsights = async (generateNew = false) => {
+  const fetchInsights = async () => {
     if (!session?.user) return;
     
     try {
       setIsLoadingInsights(true);
-      const response = await fetch(
-        generateNew 
-          ? '/api/insights/generate'
-          : '/api/insights?limit=5&status=new',
+      const response = await fetch('/api/insights?limit=5&status=new',
         {
-          method: generateNew ? 'POST' : 'GET',
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -370,7 +383,7 @@ export default function Dashboard() {
       }
       
       const data = await response.json();
-      setInsights(generateNew ? data.insights : data.insights);
+      setInsights(data.insights);
     } catch (error) {
       console.error('Error fetching insights:', error);
     } finally {
@@ -387,6 +400,8 @@ export default function Dashboard() {
       fetchAccounts()
       // Fetch financial summary
       fetchFinancialSummary()
+      // Fetch insights
+      fetchInsights()
     }
   }, [status, router])
 
@@ -877,7 +892,7 @@ export default function Dashboard() {
               <h2 className="font-semibold">AI Insights</h2>
               <button 
                 className="text-gray-400 hover:text-gray-500"
-                onClick={() => fetchInsights(true)}
+                onClick={() => fetchInsights()}
                 disabled={isLoadingInsights}
               >
                 {isLoadingInsights ? (
@@ -888,7 +903,11 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="p-4 space-y-4">
-              {insights.length > 0 ? (
+              {isLoadingInsights ? (
+                <div className="flex justify-center items-center p-4">
+                  <div className="w-8 h-8 border-t-4 border-gray-900 border-solid rounded-full animate-spin"></div>
+                </div>
+              ) : insights && insights.length > 0 ? (
                 insights.map((insight, index) => (
                   <InsightItem 
                     key={insight.id}
@@ -903,7 +922,7 @@ export default function Dashboard() {
                   No insights available. Click refresh to generate new insights.
                 </div>
               )}
-              {insights.length > 0 && (
+              {insights && insights.length > 0 && (
                 <div className="text-center mt-6">
                   <Link 
                     href="/insights"

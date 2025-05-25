@@ -81,3 +81,11 @@ export const FINANCIAL_GOAL_STATUS = [
   { label: "Abandoned", value: "abandoned", icon: "delete" },
   { label: "Paused", value: "paused", icon: "pause" },
 ];
+
+export const INSIGHTS_TYPES = {
+  GOAL_SUGGESTION: { value: "goal_suggestion", label: "Goal Suggestion" },
+  FINANCIAL_INSIGHTS: { value: "financial_insights", label: "Financial Insights" },
+  EXPENSE_CATEGORY_SUGGESTION: { value: "expense_category_suggestion", label: "Expense Category Suggestion" },
+  INCOME_CATEGORY_SUGGESTION: { value: "income_category_suggestion", label: "Income Category Suggestion" },
+  SAVING_CATEGORY_SUGGESTION: { value: "saving_category_suggestion", label: "Saving Category Suggestion" },
+};

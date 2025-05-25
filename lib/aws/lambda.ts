@@ -1,4 +1,5 @@
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { INSIGHTS_TYPES } from '@/utils/constants';
 
 function getLambdaClient() {
   if (!process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
@@ -41,6 +42,23 @@ export async function invokeProcessFinancialSummary(jobId: string, userId: strin
       data: {
         userId,
         accountId,
+      }
+    }),
+  }));
+}
+
+export async function invokeGenerateInsights(jobId: string, userId: string, insightsType: string) {
+  const lambdaClient = getLambdaClient();
+  
+  return lambdaClient.send(new InvokeCommand({
+    FunctionName: process.env.AWS_LAMBDA_INSIGHTS_FN_NAME as string,
+    Payload: JSON.stringify({
+      jobId,
+      data: {
+        userId,
+        insightsType,
+        insightsStatus: 'pending',
+        insightsGeneratedAt: new Date().toISOString(),
       }
     }),
   }));

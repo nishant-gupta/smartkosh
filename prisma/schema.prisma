@@ -74,6 +74,7 @@ enum InsightType {
   goal_progress
   spending_alert
   general_advice
+  financial_insights
 }
 
 enum InsightStatus {
